@@ -4,8 +4,7 @@ const MODAL_API_URL =
   process.env.MODAL_API_URL ||
   "https://nkjain92--ace-step-v15-web.modal.run";
 
-export const maxDuration = 300;
-
+// Submit a job to the queue
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -15,14 +14,9 @@ export async function POST(req: NextRequest) {
       lyrics: body.lyrics || "[Instrumental]",
       duration: Math.min(Math.max(body.duration || 30, 10), 120),
       bpm: body.bpm || null,
-      seed: -1,
-      inference_steps: 8,
-      thinking: true,
-      batch_size: 1,
-      audio_format: "mp3",
     };
 
-    const res = await fetch(`${MODAL_API_URL}/generate_file`, {
+    const res = await fetch(`${MODAL_API_URL}/queue/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -31,24 +25,43 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const error = await res.text();
       return NextResponse.json(
-        { error: `Generation failed: ${error}` },
+        { error: `Failed to submit: ${error}` },
         { status: 500 }
       );
     }
 
-    const audioBuffer = await res.arrayBuffer();
-
-    return new NextResponse(audioBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Disposition": 'attachment; filename="riff.mp3"',
-      },
-    });
+    const data = await res.json();
+    return NextResponse.json(data); // { job_id, position }
   } catch (err) {
-    console.error("Generation error:", err);
+    console.error("Submit error:", err);
     return NextResponse.json(
-      { error: "Failed to generate music. Please try again." },
+      { error: "Failed to submit. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+// Poll job status
+export async function GET(req: NextRequest) {
+  const jobId = req.nextUrl.searchParams.get("job_id");
+  if (!jobId) {
+    return NextResponse.json({ error: "job_id required" }, { status: 400 });
+  }
+
+  try {
+    const res = await fetch(`${MODAL_API_URL}/queue/status/${jobId}`);
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Job not found" },
+        { status: 404 }
+      );
+    }
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error("Status poll error:", err);
+    return NextResponse.json(
+      { error: "Failed to check status" },
       { status: 500 }
     );
   }
