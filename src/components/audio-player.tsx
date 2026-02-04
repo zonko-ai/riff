@@ -138,7 +138,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
       />
 
       {/* Visualizer */}
-      <div className="relative h-20 w-full rounded-lg bg-muted/50 overflow-hidden">
+      <div className="relative h-20 w-full rounded-2xl glass overflow-hidden">
         <canvas
           ref={canvasRef}
           width={600}
@@ -170,7 +170,8 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
           className={cn(
             "flex items-center justify-center size-12 rounded-full",
             "bg-accent text-white transition-transform",
-            "hover:scale-105 active:scale-95"
+            "hover:scale-105 active:scale-95",
+            "shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
           )}
         >
           {isPlaying ? (
@@ -207,11 +208,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
       <div className="flex gap-3">
         <button
           onClick={handleDownload}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5",
-            "bg-accent text-white font-medium text-sm",
-            "hover:bg-accent/90 active:scale-[0.98] transition-transform"
-          )}
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 btn-primary text-white font-medium text-sm"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M8 2v9m0 0L4.5 7.5M8 11l3.5-3.5M2 13h12" />
@@ -220,11 +217,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
         </button>
         <button
           onClick={onReset}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5",
-            "border border-border text-muted-foreground font-medium text-sm",
-            "hover:text-foreground hover:border-foreground/20 transition-colors"
-          )}
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm transition-colors hover:text-foreground"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M2 8a6 6 0 0 1 10.3-4.2M14 2v4h-4M14 8a6 6 0 0 1-10.3 4.2M2 14v-4h4" />

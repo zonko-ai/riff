@@ -33,7 +33,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div className="gradient-mesh" />
+        <div className="relative z-10">{children}</div>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, vibe, lyricsDensity } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -19,6 +19,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const densityMap: Record<string, string> = {
+      light: "Write minimal lyrics — just a verse and short chorus, with instrumental breaks. Keep it to about 20-30 seconds of vocal content.",
+      moderate: "Write 2 verses and a chorus. Balance between vocals and instrumentals. Suitable for a 30-60 second song.",
+      heavy: "Write dense, lyric-heavy content — 3 verses, chorus, and a bridge. Lots of vocal content. Suitable for 60-120 seconds.",
+    };
+    const densityInstruction = densityMap[lyricsDensity || "moderate"];
 
     const res = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
@@ -32,12 +39,15 @@ export async function POST(req: NextRequest) {
           {
             role: "system",
             content: `You are a professional songwriter. Given a description, generate:
-1. A music caption (1-2 sentences describing the genre, mood, instruments, tempo)
+1. A music caption (1-2 sentences describing the genre, mood, instruments, tempo, vocal style — max 500 chars)
 2. Song lyrics with section markers like [Verse], [Chorus], [Bridge], [Outro]
+
+${vibe ? `The mood/vibe should be: ${vibe}` : ""}
+
+${densityInstruction}
 
 The lyrics should be personal, emotional, and match the user's description.
 If names are mentioned, weave them naturally into the lyrics.
-Keep it to 2-3 verses and a chorus (suitable for a 30-60 second song).
 
 Respond in this exact JSON format:
 {
@@ -48,10 +58,7 @@ Respond in this exact JSON format:
 
 Only respond with valid JSON, no markdown or extra text.`,
           },
-          {
-            role: "user",
-            content: prompt,
-          },
+          { role: "user", content: prompt },
         ],
         temperature: 0.9,
       }),
@@ -76,7 +83,6 @@ Only respond with valid JSON, no markdown or extra text.`,
       );
     }
 
-    // Parse the JSON response from Grok
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
 

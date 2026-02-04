@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
       lyrics: body.lyrics || "[Instrumental]",
       duration: Math.min(Math.max(body.duration || 30, 10), 120),
       bpm: body.bpm || null,
+      keyscale: body.keyscale || null,
+      timesignature: body.timesignature || null,
+      instrumental: body.instrumental || false,
+      vocal_language: body.vocal_language || null,
     };
 
     const res = await fetch(`${MODAL_API_URL}/queue/submit`, {

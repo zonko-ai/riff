@@ -14,7 +14,7 @@ export function QueueStatus({ position, status, onCancel }: QueueStatusProps) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-5 py-8">
+    <div className="flex flex-col items-center gap-5 py-8 px-6 glass rounded-3xl">
       {/* Position circle */}
       <div className="relative flex items-center justify-center">
         <svg className="size-24" viewBox="0 0 96 96">
@@ -51,7 +51,7 @@ export function QueueStatus({ position, status, onCancel }: QueueStatusProps) {
           You&apos;re #{position} in line
         </p>
         <p className="text-xs text-muted-foreground">
-          {position === 1
+          {position <= 1
             ? "You're next — starting soon"
             : `${position - 1} ${position - 1 === 1 ? "person" : "people"} ahead of you`}
         </p>
@@ -64,7 +64,7 @@ export function QueueStatus({ position, status, onCancel }: QueueStatusProps) {
             key={i}
             className="size-1.5 rounded-full bg-accent"
             style={{
-              animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+              animation: `pulse-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
             }}
           />
         ))}
@@ -74,18 +74,12 @@ export function QueueStatus({ position, status, onCancel }: QueueStatusProps) {
         onClick={onCancel}
         className={cn(
           "text-sm text-muted-foreground hover:text-foreground transition-colors py-2 px-4",
-          "rounded-lg hover:bg-muted/50"
+          "rounded-xl glass glass-hover"
         )}
       >
         Leave queue
       </button>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
     </div>
   );
 }

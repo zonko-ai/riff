@@ -21,7 +21,7 @@ export function GeneratingState() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-6 py-8">
+    <div className="flex flex-col items-center gap-6 py-8 px-6 glass rounded-3xl">
       {/* Waveform skeleton */}
       <div className="flex items-end gap-[3px] h-16">
         {Array.from({ length: 32 }).map((_, i) => (
@@ -30,7 +30,7 @@ export function GeneratingState() {
             className="w-1.5 rounded-full bg-accent/40"
             style={{
               height: `${20 + Math.sin(i * 0.4) * 60}%`,
-              animation: `pulse 1.5s ease-in-out ${i * 0.05}s infinite`,
+              animation: `pulse-dot 1.5s ease-in-out ${i * 0.05}s infinite`,
             }}
           />
         ))}
@@ -40,12 +40,6 @@ export function GeneratingState() {
         {MESSAGES[messageIndex]}
       </p>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
-          50% { opacity: 1; transform: scaleY(1); }
-        }
-      `}</style>
     </div>
   );
 }
