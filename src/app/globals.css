@@ -56,7 +56,6 @@ body {
   content: "";
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
   will-change: transform;
   animation: mesh-drift 25s ease-in-out infinite alternate;
 }
@@ -64,7 +63,7 @@ body {
 .gradient-mesh::before {
   width: 700px;
   height: 700px;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.25), transparent 70%);
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.18), rgba(251, 146, 60, 0.06) 40%, transparent 70%);
   top: -250px;
   right: -150px;
 }
@@ -72,7 +71,7 @@ body {
 .gradient-mesh::after {
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.15), rgba(167, 139, 250, 0.05) 40%, transparent 70%);
   bottom: -200px;
   left: -150px;
   animation-delay: -10s;
@@ -86,10 +85,8 @@ body {
 
 /* Glass card */
 .glass {
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 

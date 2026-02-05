@@ -47,6 +47,11 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
     const dataArray = new Uint8Array(bufferLength);
 
     const draw = () => {
+      if (document.hidden) {
+        animFrameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
       animFrameRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
@@ -153,7 +158,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
                   key={i}
                   className="w-1.5 rounded-full bg-accent/20"
                   style={{
-                    height: `${20 + Math.sin(i * 0.5) * 40 + Math.random() * 20}%`,
+                    height: `${20 + Math.sin(i * 0.5) * 40 + ((i * 7 + 3) % 20)}%`,
                   }}
                 />
               ))}
