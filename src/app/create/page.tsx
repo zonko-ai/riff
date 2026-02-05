@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,14 @@ import { GenrePills } from "@/components/genre-pills";
 import { AudioPlayer } from "@/components/audio-player";
 import { GeneratingState } from "@/components/generating-state";
 import { Logo } from "@/components/logo";
+
+export default function CreatePage() {
+  return (
+    <Suspense>
+      <CreatePageInner />
+    </Suspense>
+  );
+}
 
 type AppState =
   | "compose"
@@ -112,7 +120,7 @@ const DEFAULT_TRACK: TrackDraft = {
   instrumental: false,
 };
 
-export default function CreatePage() {
+function CreatePageInner() {
   const searchParams = useSearchParams();
   // Core state machine
   const [state, setState] = useState<AppState>("compose");
