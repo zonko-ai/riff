@@ -378,7 +378,7 @@ export default function Home() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* Header */}
-      <header className="backdrop-blur-xl bg-white/[0.02] border-b border-white/[0.06] px-6 py-4">
+      <header className="backdrop-blur-xl bg-white/70 border-b border-black/[0.06] px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-accent flex items-center justify-center">
@@ -852,11 +852,11 @@ export default function Home() {
                             onChange={(e) => setMusicalKey(e.target.value)}
                             className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
                           >
-                            <option value="" className="bg-[#0a0a0a]">
+                            <option value="" className="bg-white">
                               Auto
                             </option>
                             {MUSICAL_KEYS.map((k) => (
-                              <option key={k} value={k} className="bg-[#0a0a0a]">
+                              <option key={k} value={k} className="bg-white">
                                 {k}
                               </option>
                             ))}
@@ -936,7 +936,7 @@ export default function Home() {
                           <option
                             key={lang}
                             value={lang.toLowerCase()}
-                            className="bg-[#0a0a0a]"
+                            className="bg-white"
                           >
                             {lang}
                           </option>
@@ -1035,7 +1035,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="backdrop-blur-xl bg-white/[0.02] border-t border-white/[0.06] px-6 py-4 text-center">
+      <footer className="backdrop-blur-xl bg-white/70 border-t border-black/[0.06] px-6 py-4 text-center">
         <p className="text-xs text-muted-foreground">
           Free &amp; open-source. Built with{" "}
           <a

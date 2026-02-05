@@ -171,7 +171,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
             "flex items-center justify-center size-12 rounded-full",
             "bg-accent text-white transition-transform",
             "hover:scale-105 active:scale-95",
-            "shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+            "shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
           )}
         >
           {isPlaying ? (

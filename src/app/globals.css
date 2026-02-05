@@ -2,19 +2,19 @@
 @import "tw-animate-css";
 
 :root {
-  --background: #0A0A0A;
-  --foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
+  --background: #FAFAF8;
+  --foreground: #1A1A2E;
+  --muted: #E5E5E0;
+  --muted-foreground: #71717A;
   --accent: #f97316;
   --accent-foreground: #fff7ed;
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
   --ring: #f97316;
   --destructive: #ef4444;
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-active: rgba(255, 255, 255, 0.12);
-  --glass-hover: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.07);
+  --glass-active: rgba(255, 255, 255, 0.85);
+  --glass-hover: rgba(255, 255, 255, 0.7);
 }
 
 @theme inline {
@@ -44,6 +44,11 @@ body {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 80%,
+    rgba(251, 191, 36, 0.08),
+    transparent 60%
+  );
 }
 
 .gradient-mesh::before,
@@ -51,25 +56,24 @@ body {
   content: "";
   position: absolute;
   border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.15;
+  filter: blur(100px);
   animation: mesh-drift 20s ease-in-out infinite alternate;
 }
 
 .gradient-mesh::before {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, #f97316, transparent 70%);
-  top: -200px;
-  right: -100px;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.25), transparent 70%);
+  top: -250px;
+  right: -150px;
 }
 
 .gradient-mesh::after {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, #ea580c, transparent 70%);
-  bottom: -150px;
-  left: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.2), transparent 70%);
+  bottom: -200px;
+  left: -150px;
   animation-delay: -10s;
 }
 
@@ -85,22 +89,23 @@ body {
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .glass-active {
   background: var(--glass-active);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .glass-hover:hover {
   background: var(--glass-hover);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Glass input */
 .glass-input {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -109,23 +114,23 @@ body {
 
 .glass-input:focus {
   border-color: rgba(249, 115, 22, 0.4);
-  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* Glass button (primary CTA) */
 .btn-primary {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   box-shadow:
-    0 0 20px rgba(249, 115, 22, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 2px 8px rgba(249, 115, 22, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.2s;
 }
 
 .btn-primary:hover {
   box-shadow:
-    0 0 30px rgba(249, 115, 22, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 4px 16px rgba(249, 115, 22, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
@@ -141,7 +146,7 @@ body {
 
 /* Glass pill (segment control) */
 .glass-pill {
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
   backdrop-filter: blur(16px);
@@ -162,12 +167,12 @@ body {
 .glass-pill-segment.active {
   background: var(--glass-active);
   color: var(--foreground);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* Glass chip (vibe/genre pills) */
 .glass-chip {
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -181,13 +186,13 @@ body {
 }
 
 .glass-chip:hover {
-  background: var(--glass-hover);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.12);
   color: var(--foreground);
 }
 
 .glass-chip.selected {
-  background: rgba(249, 115, 22, 0.12);
+  background: rgba(249, 115, 22, 0.1);
   border-color: rgba(249, 115, 22, 0.3);
   color: var(--accent);
 }
@@ -214,7 +219,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
 
