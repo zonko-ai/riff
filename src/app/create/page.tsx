@@ -78,7 +78,13 @@ const MUSICAL_KEYS = [
   "B minor",
 ] as const;
 
-const LANGUAGES = [
+type LanguageOption = {
+  label: string;
+  value: string;
+  experimental?: boolean;
+};
+
+const LANGUAGES: LanguageOption[] = [
   { label: "Auto", value: "auto" },
   { label: "English", value: "english" },
   { label: "Spanish", value: "spanish" },
@@ -95,7 +101,7 @@ const LANGUAGES = [
   { label: "Thai", value: "thai", experimental: true },
   { label: "Vietnamese", value: "vietnamese", experimental: true },
   { label: "Turkish", value: "turkish", experimental: true },
-] as const;
+];
 
 const SECTION_MARKERS = ["[Verse]", "[Chorus]", "[Bridge]", "[Outro]", "[Intro]"] as const;
 
