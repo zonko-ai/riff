@@ -52,8 +52,7 @@ If names are mentioned, weave them naturally into the lyrics.
 Respond in this exact JSON format:
 {
   "caption": "your music description here",
-  "lyrics": "[Verse]\\nLyrics here...\\n\\n[Chorus]\\nChorus here...",
-  "duration": 45
+  "lyrics": "[Verse]\\nLyrics here...\\n\\n[Chorus]\\nChorus here..."
 }
 
 Only respond with valid JSON, no markdown or extra text.`,
@@ -89,7 +88,6 @@ Only respond with valid JSON, no markdown or extra text.`,
     return NextResponse.json({
       caption: parsed.caption,
       lyrics: parsed.lyrics,
-      duration: parsed.duration || 45,
     });
   } catch (err) {
     console.error("Lyrics generation error:", err);

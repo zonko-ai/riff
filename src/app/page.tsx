@@ -125,7 +125,7 @@ export default function Home() {
 
           if (data.status === "queued") {
             setQueuePosition(data.position);
-            setState("queued");
+            setState(data.position <= 1 ? "generating" : "queued");
           } else if (data.status === "generating") {
             setState("generating");
           } else if (data.status === "complete" && data.audio_url) {
@@ -246,7 +246,6 @@ export default function Home() {
       const data = await res.json();
       setCaption(data.caption);
       setLyrics(data.lyrics);
-      setDuration(data.duration || duration);
       setState("preview-lyrics");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate lyrics");

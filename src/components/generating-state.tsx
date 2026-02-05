@@ -12,34 +12,47 @@ const MESSAGES = [
 
 export function GeneratingState() {
   const [messageIndex, setMessageIndex] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const msgInterval = setInterval(() => {
       setMessageIndex((i) => (i + 1) % MESSAGES.length);
     }, 4000);
-    return () => clearInterval(interval);
+    const tickInterval = setInterval(() => {
+      setElapsed((e) => e + 1);
+    }, 1000);
+    return () => {
+      clearInterval(msgInterval);
+      clearInterval(tickInterval);
+    };
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-6 py-8 px-6 glass rounded-3xl">
+    <div className="flex flex-col items-center gap-5 py-8 px-6 glass rounded-3xl">
       {/* Waveform skeleton */}
-      <div className="flex items-end gap-[3px] h-16">
-        {Array.from({ length: 32 }).map((_, i) => (
+      <div className="flex items-end gap-1 h-14">
+        {Array.from({ length: 16 }).map((_, i) => (
           <div
             key={i}
             className="w-1.5 rounded-full bg-accent/40"
             style={{
-              height: `${20 + Math.sin(i * 0.4) * 60}%`,
-              animation: `pulse-dot 1.5s ease-in-out ${i * 0.05}s infinite`,
+              height: `${20 + Math.sin(i * 0.6) * 60}%`,
+              animation: `pulse-dot 1.5s ease-in-out ${i * 0.1}s infinite`,
             }}
           />
         ))}
       </div>
 
-      <p className="text-sm text-muted-foreground animate-in fade-in">
-        {MESSAGES[messageIndex]}
-      </p>
-
+      <div className="text-center space-y-1">
+        <p className="text-sm text-muted-foreground">
+          {MESSAGES[messageIndex]}
+        </p>
+        <p className="text-xs text-muted-foreground/60 tabular-nums">
+          {elapsed < 25
+            ? "Usually takes about 30 seconds"
+            : "Finishing up..."}
+        </p>
+      </div>
     </div>
   );
 }
