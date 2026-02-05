@@ -222,7 +222,7 @@ export default function CreatePage() {
           );
 
           const currentJobs = trackJobsRef.current;
-          const nextJobs = currentJobs.map((job) => {
+          const nextJobs = currentJobs.map<TrackJob>((job) => {
             const update = updates.find((item) => item.id === job.id);
             if (!update) return job;
 
