@@ -56,8 +56,9 @@ body {
   content: "";
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  animation: mesh-drift 20s ease-in-out infinite alternate;
+  filter: blur(80px);
+  will-change: transform;
+  animation: mesh-drift 25s ease-in-out infinite alternate;
 }
 
 .gradient-mesh::before {
@@ -105,11 +106,9 @@ body {
 
 /* Glass input */
 .glass-input {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .glass-input:focus {
@@ -124,7 +123,7 @@ body {
   box-shadow:
     0 2px 8px rgba(249, 115, 22, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .btn-primary:hover {
@@ -146,11 +145,9 @@ body {
 
 /* Glass pill (segment control) */
 .glass-pill {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.65);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   padding: 4px;
 }
 
@@ -159,7 +156,7 @@ body {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   color: var(--muted-foreground);
   cursor: pointer;
 }
@@ -172,16 +169,14 @@ body {
 
 /* Glass chip (vibe/genre pills) */
 .glass-chip {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 500;
   color: var(--muted-foreground);
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
   cursor: pointer;
 }
 

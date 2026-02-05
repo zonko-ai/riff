@@ -378,7 +378,7 @@ export default function Home() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* Header */}
-      <header className="backdrop-blur-xl bg-white/70 border-b border-black/[0.06] px-6 py-4">
+      <header className="bg-white/80 border-b border-black/[0.06] px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-accent flex items-center justify-center">
@@ -1035,7 +1035,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="backdrop-blur-xl bg-white/70 border-t border-black/[0.06] px-6 py-4 text-center">
+      <footer className="bg-white/80 border-t border-black/[0.06] px-6 py-4 text-center">
         <p className="text-xs text-muted-foreground">
           Free &amp; open-source. Built with{" "}
           <a
