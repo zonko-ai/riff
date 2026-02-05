@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       timesignature: body.timesignature || null,
       instrumental: body.instrumental || false,
       vocal_language: body.vocal_language || null,
+      seed: typeof body.seed === "number" ? body.seed : null,
     };
 
     const res = await fetch(`${MODAL_API_URL}/queue/submit`, {
@@ -48,11 +49,24 @@ export async function POST(req: NextRequest) {
 // Poll job status
 export async function GET(req: NextRequest) {
   const jobId = req.nextUrl.searchParams.get("job_id");
+  const cancel = req.nextUrl.searchParams.get("cancel");
   if (!jobId) {
     return NextResponse.json({ error: "job_id required" }, { status: 400 });
   }
 
   try {
+    if (cancel) {
+      const res = await fetch(`${MODAL_API_URL}/queue/cancel/${jobId}`);
+      if (!res.ok) {
+        return NextResponse.json(
+          { error: "Failed to cancel job" },
+          { status: 500 }
+        );
+      }
+      const data = await res.json();
+      return NextResponse.json({ cancelled: data.cancelled });
+    }
+
     const res = await fetch(`${MODAL_API_URL}/queue/status/${jobId}`);
     if (!res.ok) {
       return NextResponse.json(

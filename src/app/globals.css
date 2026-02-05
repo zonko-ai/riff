@@ -37,6 +37,14 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+.font-display {
+  font-family: var(--font-landing-display), var(--font-sans), system-ui, sans-serif;
+}
+
+.font-body {
+  font-family: var(--font-landing-body), var(--font-sans), system-ui, sans-serif;
+}
+
 /* Animated gradient mesh background */
 .gradient-mesh {
   position: fixed;
@@ -116,7 +124,7 @@ body {
 
 /* Glass button (primary CTA) */
 .btn-primary {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: #f97316;
   box-shadow:
     0 2px 8px rgba(249, 115, 22, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -124,6 +132,7 @@ body {
 }
 
 .btn-primary:hover {
+  background: #ea580c;
   box-shadow:
     0 4px 16px rgba(249, 115, 22, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);

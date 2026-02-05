@@ -5,7 +5,7 @@ import { cn, formatDuration } from "@/lib/utils";
 
 interface AudioPlayerProps {
   src: string;
-  onReset: () => void;
+  onReset?: () => void;
 }
 
 export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
@@ -220,15 +220,17 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
           </svg>
           Download MP3
         </button>
-        <button
-          onClick={onReset}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm transition-colors hover:text-foreground"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M2 8a6 6 0 0 1 10.3-4.2M14 2v4h-4M14 8a6 6 0 0 1-10.3 4.2M2 14v-4h4" />
-          </svg>
-          Make another
-        </button>
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm transition-colors hover:text-foreground"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M2 8a6 6 0 0 1 10.3-4.2M14 2v4h-4M14 8a6 6 0 0 1-10.3 4.2M2 14v-4h4" />
+            </svg>
+            Make another
+          </button>
+        )}
       </div>
     </div>
   );

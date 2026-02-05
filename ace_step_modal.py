@@ -188,7 +188,7 @@ def web():
                 timesignature=params.get("timesignature") or "",
                 instrumental=params.get("instrumental", False),
                 vocal_language=params.get("vocal_language") or "unknown",
-                seed=random.randint(0, 2**31 - 1),
+                seed=params.get("seed") or random.randint(0, 2**31 - 1),
                 inference_steps=8,
                 thinking=True,
                 shift=3.0,
@@ -254,6 +254,7 @@ def web():
         timesignature: str | None = None
         instrumental: bool = False
         vocal_language: str | None = None
+        seed: int | None = None
 
     # ---- Endpoints ----
     @web_app.get("/")
@@ -377,7 +378,7 @@ def web():
             timesignature=req.timesignature or "",
             instrumental=req.instrumental,
             vocal_language=req.vocal_language or "unknown",
-            seed=random.randint(0, 2**31 - 1),
+            seed=req.seed or random.randint(0, 2**31 - 1),
             inference_steps=8,
             thinking=True,
             shift=3.0,

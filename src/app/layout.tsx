@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Bricolage_Grotesque,
+  Instrument_Sans,
+} from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,10 +19,28 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const landingDisplay = Bricolage_Grotesque({
+  variable: "--font-landing-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const landingBody = Instrument_Sans({
+  variable: "--font-landing-body",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Riff — AI Music Generator",
   description:
     "Describe the music in your head. Riff generates it in seconds. Powered by ACE-Step, free and open-source.",
+  manifest: "/manifest.json",
+  themeColor: "#f97316",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "Riff — AI Music Generator",
     description: "Describe the music in your head. Riff generates it in seconds.",
@@ -33,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} ${landingBody.variable} antialiased`}
       >
         <div className="gradient-mesh" />
         <div className="relative z-10">{children}</div>

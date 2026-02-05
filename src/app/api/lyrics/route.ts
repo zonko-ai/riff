@@ -11,7 +11,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { prompt, vibe, lyricsDensity } = await req.json();
+    const {
+      prompt,
+      vibe,
+      lyricsDensity,
+      variant,
+      baseLyrics,
+      baseCaption,
+      contrast,
+    } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -26,6 +34,26 @@ export async function POST(req: NextRequest) {
       heavy: "Write dense, lyric-heavy content — 3 verses, chorus, and a bridge. Lots of vocal content. Suitable for 60-120 seconds.",
     };
     const densityInstruction = densityMap[lyricsDensity || "moderate"];
+
+    const contrastMap: Record<string, string> = {
+      subtle: "Keep changes subtle but noticeable, with small shifts in phrasing and instrumentation.",
+      balanced: "Make it distinctly different in groove, instrumentation, and melodic phrasing.",
+      bold: "Reimagine it in a different genre or tempo with clearly different phrasing.",
+    };
+
+    const variantInstruction =
+      variant === "alternate"
+        ? `Create an alternate version that is clearly different from the original.
+${contrast ? contrastMap[contrast] || "" : ""}
+${baseLyrics ? "Avoid reusing lines from the reference lyrics." : ""}`
+        : "";
+
+    const referenceBlock =
+      baseLyrics || baseCaption
+        ? `Reference context (do not copy verbatim):
+${baseCaption ? `Caption: ${baseCaption}` : ""}
+${baseLyrics ? `Lyrics: ${baseLyrics}` : ""}`
+        : "";
 
     const res = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
@@ -45,6 +73,10 @@ export async function POST(req: NextRequest) {
 ${vibe ? `The mood/vibe should be: ${vibe}` : ""}
 
 ${densityInstruction}
+
+${variantInstruction}
+
+${referenceBlock}
 
 The lyrics should be personal, emotional, and match the user's description.
 If names are mentioned, weave them naturally into the lyrics.
