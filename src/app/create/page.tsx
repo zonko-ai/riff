@@ -169,7 +169,7 @@ function CreatePageInner() {
   const [longerDuration, setLongerDuration] = useState(60);
 
   // Refs
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lyricsRef = useRef<HTMLTextAreaElement>(null);
 
   const parseSeed = (value: string) => {
@@ -216,7 +216,7 @@ function CreatePageInner() {
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
-      clearInterval(pollRef.current);
+      clearTimeout(pollRef.current);
       pollRef.current = null;
     }
   }, []);
@@ -224,7 +224,8 @@ function CreatePageInner() {
   const startPolling = useCallback(
     (ids: string[]) => {
       stopPolling();
-      pollRef.current = setInterval(async () => {
+
+      const poll = async () => {
         try {
           const updates = await Promise.all(
             ids.map(async (id) => {
@@ -334,16 +335,19 @@ function CreatePageInner() {
 
           if (anyGenerating) {
             setState("generating");
-            return;
-          }
-
-          if (anyQueued) {
+          } else if (anyQueued) {
             setState("queued");
           }
         } catch {
           // Silently retry on network errors
         }
-      }, 2000);
+
+        // Schedule next poll only after current one completes
+        pollRef.current = setTimeout(poll, 2000);
+      };
+
+      // Start first poll immediately
+      poll();
     },
     [stopPolling]
   );
