@@ -42,6 +42,15 @@ type TrackDraft = {
   timesignature?: string;
   vocal_language?: string;
   seed?: string;
+  // Advanced generation params
+  inference_steps?: number;
+  thinking?: boolean;
+  infer_method?: string;
+  lm_temperature?: number;
+  lm_cfg_scale?: number;
+  lm_top_k?: number;
+  lm_top_p?: number;
+  lm_negative_prompt?: string;
 };
 
 type TrackJob = {
@@ -151,6 +160,15 @@ function CreatePageInner() {
   const [timeSignature, setTimeSignature] = useState("");
   const [vocalLanguage, setVocalLanguage] = useState("auto");
   const [showMusicalControls, setShowMusicalControls] = useState(false);
+  const [showAdvancedGen, setShowAdvancedGen] = useState(false);
+  const [inferenceSteps, setInferenceSteps] = useState(8);
+  const [thinking, setThinking] = useState(true);
+  const [inferMethod, setInferMethod] = useState("ode");
+  const [lmTemperature, setLmTemperature] = useState(0.85);
+  const [lmCfgScale, setLmCfgScale] = useState(2.0);
+  const [lmTopK, setLmTopK] = useState(0);
+  const [lmTopP, setLmTopP] = useState(0.9);
+  const [lmNegativePrompt, setLmNegativePrompt] = useState("");
 
   // Drafts and jobs
   const [previewTracks, setPreviewTracks] = useState<TrackDraft[]>([
@@ -212,6 +230,14 @@ function CreatePageInner() {
     timesignature: timeSignature || undefined,
     vocal_language: vocalLanguage === "auto" ? undefined : vocalLanguage,
     seed: seedValue !== undefined ? String(seedValue) : undefined,
+    inference_steps: inferenceSteps,
+    thinking,
+    infer_method: inferMethod,
+    lm_temperature: lmTemperature,
+    lm_cfg_scale: lmCfgScale,
+    lm_top_k: lmTopK,
+    lm_top_p: lmTopP,
+    lm_negative_prompt: lmNegativePrompt || undefined,
   });
 
   const stopPolling = useCallback(() => {
@@ -463,6 +489,14 @@ function CreatePageInner() {
             timesignature: track.timesignature || null,
             vocal_language: track.vocal_language || null,
             seed: track.seed ? parseInt(track.seed, 10) : null,
+            inference_steps: track.inference_steps ?? 8,
+            thinking: track.thinking ?? true,
+            infer_method: track.infer_method ?? "ode",
+            lm_temperature: track.lm_temperature ?? 0.85,
+            lm_cfg_scale: track.lm_cfg_scale ?? 2.0,
+            lm_top_k: track.lm_top_k ?? 0,
+            lm_top_p: track.lm_top_p ?? 0.9,
+            lm_negative_prompt: track.lm_negative_prompt || null,
           };
           console.group(`Track ${idx === 0 ? "A" : "B"} → /api/generate`);
           console.log("Caption:", payload.caption);
@@ -472,6 +506,10 @@ function CreatePageInner() {
           console.log("BPM:", payload.bpm);
           console.log("Key:", payload.keyscale);
           console.log("Time sig:", payload.timesignature);
+          console.log("Inference steps:", payload.inference_steps);
+          console.log("Thinking:", payload.thinking);
+          console.log("Infer method:", payload.infer_method);
+          console.log("LM temp:", payload.lm_temperature, "CFG:", payload.lm_cfg_scale, "TopK:", payload.lm_top_k, "TopP:", payload.lm_top_p);
           console.log("Language:", payload.vocal_language);
           console.log("Seed:", payload.seed);
           console.groupEnd();
@@ -801,6 +839,14 @@ function CreatePageInner() {
       keyscale: track.keyscale || null,
       timesignature: track.timesignature || null,
       vocal_language: track.vocal_language || null,
+      inference_steps: track.inference_steps ?? 8,
+      thinking: track.thinking ?? true,
+      infer_method: track.infer_method ?? "ode",
+      lm_temperature: track.lm_temperature ?? 0.85,
+      lm_cfg_scale: track.lm_cfg_scale ?? 2.0,
+      lm_top_k: track.lm_top_k ?? 0,
+      lm_top_p: track.lm_top_p ?? 0.9,
+      lm_negative_prompt: track.lm_negative_prompt || null,
       seed: regenSeed ?? null,
     };
     console.log("Caption:", payload.caption);
@@ -1685,6 +1731,196 @@ function CreatePageInner() {
                             value={seed}
                             onChange={(e) => setSeed(e.target.value)}
                             placeholder="Random"
+                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Generation Settings (collapsible) */}
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedGen(!showAdvancedGen)}
+                      className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        className={cn(
+                          "transition-transform",
+                          showAdvancedGen && "rotate-90"
+                        )}
+                      >
+                        <path d="M4.5 2.5l4 3.5-4 3.5" />
+                      </svg>
+                      <span className="uppercase">Generation Settings</span>
+                    </button>
+
+                    {showAdvancedGen && (
+                      <div className="space-y-4 pt-2">
+                        {/* Thinking toggle */}
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs text-muted-foreground flex-1">
+                            Thinking (Chain-of-Thought)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setThinking(!thinking)}
+                            className={cn(
+                              "w-10 h-5 rounded-full transition-colors relative",
+                              thinking ? "bg-foreground/80" : "bg-foreground/20"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                                thinking ? "left-5" : "left-0.5"
+                              )}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Inference Steps */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">
+                              Quality (Inference Steps)
+                            </label>
+                            <span className="text-xs text-muted-foreground/70">{inferenceSteps}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={1}
+                            max={20}
+                            step={1}
+                            value={inferenceSteps}
+                            onChange={(e) => setInferenceSteps(parseInt(e.target.value, 10))}
+                            className="w-full accent-foreground/60"
+                          />
+                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                            <span>Fast</span>
+                            <span>High Quality</span>
+                          </div>
+                        </div>
+
+                        {/* Inference Method */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            Inference Method
+                          </label>
+                          <div className="glass-pill flex">
+                            {(["ode", "sde"] as const).map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setInferMethod(m)}
+                                className={cn(
+                                  "glass-pill-segment flex-1 text-center",
+                                  inferMethod === m && "active"
+                                )}
+                              >
+                                {m === "ode" ? "ODE (Clean)" : "SDE (Textured)"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* LM Temperature */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">
+                              Creativity (LM Temperature)
+                            </label>
+                            <span className="text-xs text-muted-foreground/70">{lmTemperature.toFixed(2)}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={2}
+                            step={0.05}
+                            value={lmTemperature}
+                            onChange={(e) => setLmTemperature(parseFloat(e.target.value))}
+                            className="w-full accent-foreground/60"
+                          />
+                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                            <span>Predictable</span>
+                            <span>Creative</span>
+                          </div>
+                        </div>
+
+                        {/* LM CFG Scale */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">
+                              LM Guidance (CFG Scale)
+                            </label>
+                            <span className="text-xs text-muted-foreground/70">{lmCfgScale.toFixed(1)}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={1}
+                            max={3}
+                            step={0.1}
+                            value={lmCfgScale}
+                            onChange={(e) => setLmCfgScale(parseFloat(e.target.value))}
+                            className="w-full accent-foreground/60"
+                          />
+                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                            <span>Free</span>
+                            <span>Guided</span>
+                          </div>
+                        </div>
+
+                        {/* LM Top-K & Top-P side by side */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">Top-K</label>
+                              <span className="text-xs text-muted-foreground/70">{lmTopK || "Off"}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={lmTopK}
+                              onChange={(e) => setLmTopK(parseInt(e.target.value, 10))}
+                              className="w-full accent-foreground/60"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">Top-P</label>
+                              <span className="text-xs text-muted-foreground/70">{lmTopP.toFixed(2)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.05}
+                              value={lmTopP}
+                              onChange={(e) => setLmTopP(parseFloat(e.target.value))}
+                              className="w-full accent-foreground/60"
+                            />
+                          </div>
+                        </div>
+
+                        {/* LM Negative Prompt */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            Negative Prompt (things to avoid in generation)
+                          </label>
+                          <input
+                            type="text"
+                            value={lmNegativePrompt}
+                            onChange={(e) => setLmNegativePrompt(e.target.value)}
+                            placeholder="e.g. distortion, heavy bass, noise"
                             className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
                           />
                         </div>

@@ -19,6 +19,15 @@ export async function POST(req: NextRequest) {
       instrumental: body.instrumental || false,
       vocal_language: body.vocal_language || null,
       seed: typeof body.seed === "number" ? body.seed : null,
+      // Advanced generation params
+      inference_steps: Math.min(Math.max(body.inference_steps ?? 8, 1), 20),
+      thinking: body.thinking ?? true,
+      infer_method: body.infer_method === "sde" ? "sde" : "ode",
+      lm_temperature: Math.min(Math.max(body.lm_temperature ?? 0.85, 0), 2),
+      lm_cfg_scale: Math.min(Math.max(body.lm_cfg_scale ?? 2.0, 1), 3),
+      lm_top_k: Math.min(Math.max(body.lm_top_k ?? 0, 0), 100),
+      lm_top_p: Math.min(Math.max(body.lm_top_p ?? 0.9, 0), 1),
+      lm_negative_prompt: body.lm_negative_prompt || null,
     };
 
     const res = await fetch(`${MODAL_API_URL}/queue/submit`, {

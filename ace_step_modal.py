@@ -147,10 +147,19 @@ class GenerateTrack:
                 instrumental=params.get("instrumental", False),
                 vocal_language=params.get("vocal_language") or "unknown",
                 seed=params.get("seed") if params.get("seed") is not None else random.randint(0, 2**31 - 1),
-                inference_steps=8,
-                thinking=True,
+                inference_steps=params.get("inference_steps", 8),
+                thinking=params.get("thinking", True),
+                infer_method=params.get("infer_method", "ode"),
                 shift=3.0,
+                lm_temperature=params.get("lm_temperature", 0.85),
+                lm_cfg_scale=params.get("lm_cfg_scale", 2.0),
+                lm_top_k=params.get("lm_top_k", 0),
+                lm_top_p=params.get("lm_top_p", 0.9),
+                lm_negative_prompt=params.get("lm_negative_prompt") or "NO USER INPUT",
             )
+            print(f"Job {job_id} params: steps={gen_params.inference_steps}, thinking={gen_params.thinking}, "
+                  f"method={gen_params.infer_method}, lm_temp={gen_params.lm_temperature}, "
+                  f"lm_cfg={gen_params.lm_cfg_scale}, top_k={gen_params.lm_top_k}, top_p={gen_params.lm_top_p}")
             config = GenerationConfig(batch_size=1, audio_format="mp3")
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -219,6 +228,15 @@ def web():
         instrumental: bool = False
         vocal_language: str | None = None
         seed: int | None = None
+        # Advanced generation params
+        inference_steps: int = Field(8, ge=1, le=20)
+        thinking: bool = True
+        infer_method: str = "ode"
+        lm_temperature: float = Field(0.85, ge=0, le=2)
+        lm_cfg_scale: float = Field(2.0, ge=1, le=3)
+        lm_top_k: int = Field(0, ge=0, le=100)
+        lm_top_p: float = Field(0.9, ge=0, le=1)
+        lm_negative_prompt: str | None = None
 
     # ---- Endpoints ----
     @web_app.get("/")
