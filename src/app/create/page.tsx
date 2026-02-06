@@ -1053,24 +1053,24 @@ function CreatePageInner() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-black/[0.06] px-6 py-4 sticky top-0 z-20">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-black/[0.04] px-6 py-6 sticky top-0 z-20">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="size-9 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_2px_8px_rgba(249,115,22,0.25)]">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_4px_12px_rgba(249,115,22,0.25)]">
               <Logo showText={false} className="text-white" />
             </div>
-            <span className="text-lg font-semibold font-display tracking-tight">Riff</span>
+            <span className="text-xl font-bold font-display tracking-tight">Riff</span>
           </Link>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-8 text-sm">
             <Link
               href="/"
-              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-accent transition-colors"
             >
               Home
             </Link>
             <Link
               href="/library"
-              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-accent transition-colors"
             >
               Library
             </Link>
@@ -1078,7 +1078,7 @@ function CreatePageInner() {
               href="https://github.com/ace-step/ACE-Step-1.5"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-accent transition-colors"
             >
               Powered by ACE-Step
             </a>
@@ -1591,6 +1591,7 @@ function CreatePageInner() {
                     className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 btn-primary text-white font-semibold text-base"
                   >
                     {isInstrumental ? "Generate Two Tracks" : "Write Lyrics & Preview"}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" /></svg>
                   </button>
                 </div>
 
@@ -2150,6 +2151,7 @@ function CreatePageInner() {
                     className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 btn-primary text-white font-semibold text-base"
                   >
                     Generate Two Tracks
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" /></svg>
                   </button>
                 </div>
               )}
@@ -2159,19 +2161,30 @@ function CreatePageInner() {
       </main>
 
       {/* Footer */}
-      <footer className="px-6 py-8 border-t border-black/[0.04]">
-        <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span className="font-display font-semibold text-foreground">Riff</span>
-          <span>Free &amp; open-source · Built on{" "}
-            <a
-              href="https://github.com/ace-step/ACE-Step-1.5"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground transition-colors"
-            >
-              ACE-Step v1.5
-            </a>
-          </span>
+      <footer className="px-6 py-12 border-t border-black/[0.04]">
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-display font-bold text-foreground">Riff</span>
+              <span className="text-sm text-muted-foreground">— Free &amp; open-source music generation</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <a
+                href="https://github.com/ace-step/ACE-Step-1.5"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-accent transition-colors"
+              >
+                GitHub
+              </a>
+              <span className="px-2 py-1 bg-black/5 rounded text-[11px] font-mono">v1.5.0</span>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest">
+              Built with ACE-Step. Open Source. MIT Licensed. © 2024 Riff AI.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
