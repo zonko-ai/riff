@@ -1,5 +1,5 @@
 """
-ACE-Step v1.5 on Modal.com — with job queue
+ACE-Step v1.5 on Modal.com — parallel track generation
 
 Setup (one-time):
     modal run ace_step_modal.py::download_models
@@ -35,7 +35,6 @@ model_volume = modal.Volume.from_name("ace-step-models", create_if_missing=True)
 MODEL_DIR = "/models"
 CKPT_DIR = "/usr/local/lib/python3.11/site-packages/checkpoints"
 VOL_CKPT = f"{MODEL_DIR}/checkpoints"
-AUDIO_DIR = "/tmp/riff-audio"
 jobs_store = modal.Dict.from_name("riff-jobs", create_if_missing=True)
 audio_volume = modal.Volume.from_name("riff-audio", create_if_missing=True)
 SHARED_AUDIO_DIR = "/shared-audio"
@@ -71,114 +70,73 @@ def download_models():
 
 
 # ---------------------------------------------------------------------------
-# Web endpoint with job queue
+# GPU generation function — one per container, Modal handles parallelism
 # ---------------------------------------------------------------------------
-@app.function(
+@app.cls(
     gpu="A10G",
     volumes={MODEL_DIR: model_volume, SHARED_AUDIO_DIR: audio_volume},
-    timeout=600,
+    timeout=300,
     scaledown_window=600,
     memory=32768,
     max_containers=10,
     min_containers=1,
 )
-@modal.concurrent(max_inputs=5)
-@modal.asgi_app()
-def web():
-    import os, uuid, time, threading, traceback, io, tempfile
-    import soundfile as sf
+class GenerateTrack:
+    @modal.enter()
+    def load_model(self):
+        import os
+        os.environ["HF_HOME"] = f"{MODEL_DIR}/hf_cache"
+        os.makedirs(SHARED_AUDIO_DIR, exist_ok=True)
+        _setup_checkpoints_symlink()
 
-    os.environ["HF_HOME"] = f"{MODEL_DIR}/hf_cache"
-    os.makedirs(SHARED_AUDIO_DIR, exist_ok=True)
-    _setup_checkpoints_symlink()
+        from acestep.handler import AceStepHandler
+        from acestep.llm_inference import LLMHandler
 
-    from fastapi import FastAPI
-    from fastapi.responses import FileResponse, JSONResponse
-    from fastapi.middleware.cors import CORSMiddleware
-    from pydantic import BaseModel, Field
-
-    web_app = FastAPI(title="ACE-Step v1.5")
-    web_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # ---- Model singleton ----
-    _models: dict = {}
-    _model_lock = threading.Lock()
-
-    def get_handlers():
-        if "dit" not in _models:
-            with _model_lock:
-                if "dit" not in _models:
-                    from acestep.handler import AceStepHandler
-                    from acestep.llm_inference import LLMHandler
-
-                    print("Loading DiT model...")
-                    dit = AceStepHandler()
-                    dit.initialize_service(
-                        project_root="/app/ACE-Step-1.5",
-                        config_path="acestep-v15-turbo",
-                        device="cuda",
-                    )
-                    print("Loading LM model...")
-                    llm = LLMHandler()
-                    try:
-                        llm.initialize(
-                            checkpoint_dir=CKPT_DIR,
-                            lm_model_path="acestep-5Hz-lm-0.6B",
-                            backend="vllm",
-                            device="cuda",
-                        )
-                    except Exception as e:
-                        print(f"vllm failed ({e}), falling back to transformers")
-                        llm.initialize(
-                            checkpoint_dir=CKPT_DIR,
-                            lm_model_path="acestep-5Hz-lm-0.6B",
-                            backend="transformers",
-                            device="cuda",
-                        )
-                    _models["dit"] = dit
-                    _models["llm"] = llm
-                    print("Models ready.")
-        return _models["dit"], _models["llm"]
-
-    # ---- Job Queue ----
-    _gpu_lock = threading.Lock()
-    _queue_lock = threading.Lock()
-    _jobs: dict = {}       # job_id -> {status, position, params, audio_path, error, created_at}
-    _queue: list = []      # ordered job_ids waiting
-    _active: set = set()   # currently generating
-
-    MAX_CONCURRENT = 1
-    JOB_TTL = 1800  # 30 min
-
-    def _cleanup_old_jobs():
-        now = time.time()
-        with _queue_lock:
-            expired = [jid for jid, j in _jobs.items()
-                       if now - j["created_at"] > JOB_TTL
-                       and j["status"] in ("complete", "failed")]
-            for jid in expired:
-                path = _jobs[jid].get("audio_path")
-                if path and os.path.exists(path):
-                    os.remove(path)
-                del _jobs[jid]
-                try:
-                    del jobs_store[jid]
-                except KeyError:
-                    pass
-
-    def _process_job(job_id: str, params: dict):
-        """Run generation (called from a thread)."""
+        print("Loading DiT model...")
+        self.dit = AceStepHandler()
+        self.dit.initialize_service(
+            project_root="/app/ACE-Step-1.5",
+            config_path="acestep-v15-turbo",
+            device="cuda",
+        )
+        print("Loading LM model...")
+        self.llm = LLMHandler()
         try:
-            import random
-            from acestep.inference import GenerationParams, GenerationConfig, generate_music
+            self.llm.initialize(
+                checkpoint_dir=CKPT_DIR,
+                lm_model_path="acestep-5Hz-lm-0.6B",
+                backend="vllm",
+                device="cuda",
+            )
+        except Exception as e:
+            print(f"vllm failed ({e}), falling back to transformers")
+            self.llm.initialize(
+                checkpoint_dir=CKPT_DIR,
+                lm_model_path="acestep-5Hz-lm-0.6B",
+                backend="transformers",
+                device="cuda",
+            )
+        print("Models ready.")
 
-            dit, llm = get_handlers()
+    @modal.method()
+    def run(self, job_id: str, params: dict):
+        import os, random, traceback, tempfile
+        import soundfile as sf
+        from acestep.inference import GenerationParams, GenerationConfig, generate_music
 
+        # Check if cancelled before starting
+        try:
+            job = jobs_store[job_id]
+            if job.get("status") == "cancelled":
+                print(f"Job {job_id} was cancelled, skipping.")
+                return
+        except KeyError:
+            pass
+
+        # Mark as generating
+        jobs_store[job_id] = {"status": "generating"}
+
+        try:
             gen_params = GenerationParams(
                 caption=params["caption"],
                 lyrics=params.get("lyrics", "[Instrumental]"),
@@ -188,16 +146,15 @@ def web():
                 timesignature=params.get("timesignature") or "",
                 instrumental=params.get("instrumental", False),
                 vocal_language=params.get("vocal_language") or "unknown",
-                seed=params.get("seed") or random.randint(0, 2**31 - 1),
+                seed=params.get("seed") if params.get("seed") is not None else random.randint(0, 2**31 - 1),
                 inference_steps=8,
                 thinking=True,
                 shift=3.0,
             )
             config = GenerationConfig(batch_size=1, audio_format="mp3")
 
-            with _gpu_lock:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    result = generate_music(dit, llm, gen_params, config, save_dir=tmpdir)
+            with tempfile.TemporaryDirectory() as tmpdir:
+                result = generate_music(self.dit, self.llm, gen_params, config, save_dir=tmpdir)
 
             if not result.success:
                 raise RuntimeError(result.error or "Generation failed")
@@ -211,38 +168,45 @@ def web():
             sf.write(audio_path, audio_np, audio_info["sample_rate"], format="MP3")
             audio_volume.commit()
 
-            with _queue_lock:
-                _active.discard(job_id)
-                if job_id in _jobs:
-                    _jobs[job_id]["status"] = "complete"
-                    _jobs[job_id]["audio_path"] = audio_path
-                    jobs_store[job_id] = {"status": "complete", "audio_path": audio_path}
+            jobs_store[job_id] = {"status": "complete", "audio_path": audio_path}
+            print(f"Job {job_id} complete.")
 
         except Exception as e:
             tb = traceback.format_exc()
             print(f"Job {job_id} failed:\n{tb}")
-            with _queue_lock:
-                _active.discard(job_id)
-                if job_id in _jobs:
-                    _jobs[job_id]["status"] = "failed"
-                    _jobs[job_id]["error"] = str(e)
-                    jobs_store[job_id] = {"status": "failed", "error": str(e)}
+            jobs_store[job_id] = {"status": "failed", "error": str(e)}
 
-        # Process next job in queue
-        _try_process_next()
 
-    def _try_process_next():
-        """Check if we can start the next queued job."""
-        with _queue_lock:
-            if not _queue or len(_active) >= MAX_CONCURRENT:
-                return
-            job_id = _queue.pop(0)
-            _active.add(job_id)
-            _jobs[job_id]["status"] = "generating"
+# ---------------------------------------------------------------------------
+# Thin HTTP API — no GPU, just submit/status/cancel/audio
+# ---------------------------------------------------------------------------
+@app.function(
+    volumes={SHARED_AUDIO_DIR: audio_volume},
+    timeout=600,
+    scaledown_window=300,
+    memory=512,
+    max_containers=2,
+    min_containers=1,
+)
+@modal.concurrent(max_inputs=50)
+@modal.asgi_app()
+def web():
+    import os, uuid
 
-        t = threading.Thread(target=_process_job, args=(job_id, _jobs[job_id]["params"]))
-        t.daemon = True
-        t.start()
+    os.makedirs(SHARED_AUDIO_DIR, exist_ok=True)
+
+    from fastapi import FastAPI
+    from fastapi.responses import FileResponse, JSONResponse
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel, Field
+
+    web_app = FastAPI(title="ACE-Step v1.5")
+    web_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # ---- API Models ----
     class SubmitRequest(BaseModel):
@@ -259,97 +223,54 @@ def web():
     # ---- Endpoints ----
     @web_app.get("/")
     def root():
-        return {"service": "ACE-Step v1.5 with Queue"}
+        return {"service": "ACE-Step v1.5"}
 
     @web_app.get("/health")
     def health():
-        with _queue_lock:
-            return {
-                "status": "ok",
-                "models_loaded": "dit" in _models,
-                "queue_length": len(_queue),
-                "active_jobs": len(_active),
-            }
+        return {"status": "ok"}
 
     @web_app.post("/queue/submit")
     def queue_submit(req: SubmitRequest):
-        _cleanup_old_jobs()
-
         job_id = str(uuid.uuid4())
-        with _queue_lock:
-            position = len(_queue) + len(_active)
-            _jobs[job_id] = {
-                "status": "queued" if position > 0 else "queued",
-                "position": position,
-                "params": req.model_dump(),
-                "audio_path": None,
-                "error": None,
-                "created_at": time.time(),
-            }
-            _queue.append(job_id)
+        jobs_store[job_id] = {"status": "queued"}
 
-        jobs_store[job_id] = {"status": "queued", "position": position}
-        _try_process_next()
+        # Spawn generation on a separate GPU container
+        GenerateTrack().run.spawn(job_id, req.model_dump())
 
-        return {"job_id": job_id, "position": position}
+        return {"job_id": job_id, "position": 0}
 
     @web_app.get("/queue/status/{job_id}")
     def queue_status(job_id: str):
-        # Check local state first
-        with _queue_lock:
-            job = _jobs.get(job_id)
-
-        if job:
-            result = {
-                "job_id": job_id,
-                "status": job["status"],
-                "error": job.get("error"),
-            }
-            if job["status"] == "queued":
-                try:
-                    result["position"] = _queue.index(job_id) + 1
-                    result["queue_length"] = len(_queue)
-                except ValueError:
-                    result["position"] = 0
-            elif job["status"] == "complete":
-                result["audio_url"] = f"/audio/{job_id}"
-            return result
-
-        # Fall back to shared state (job may be on another container)
         try:
-            shared_job = jobs_store[job_id]
-            result = {
-                "job_id": job_id,
-                "status": shared_job["status"],
-                "error": shared_job.get("error"),
-            }
-            if shared_job["status"] == "complete":
-                result["audio_url"] = f"/audio/{job_id}"
-            return result
+            job = jobs_store[job_id]
         except KeyError:
             return JSONResponse(status_code=404, content={"error": "Job not found"})
 
+        result = {
+            "job_id": job_id,
+            "status": job["status"],
+            "error": job.get("error"),
+        }
+        if job["status"] == "complete":
+            result["audio_url"] = f"/audio/{job_id}"
+        return result
+
     @web_app.get("/queue/cancel/{job_id}")
     def queue_cancel(job_id: str):
-        with _queue_lock:
-            if job_id in _queue:
-                _queue.remove(job_id)
-                _jobs[job_id]["status"] = "cancelled"
-                return {"cancelled": True}
-            return {"cancelled": False, "reason": "Job not in queue (may already be processing)"}
+        try:
+            job = jobs_store[job_id]
+        except KeyError:
+            return {"cancelled": False, "reason": "Job not found"}
+
+        if job["status"] == "queued":
+            jobs_store[job_id] = {"status": "cancelled"}
+            return {"cancelled": True}
+        return {"cancelled": False, "reason": "Job not in queue (may already be processing)"}
 
     @web_app.get("/audio/{job_id}")
     def get_audio(job_id: str):
-        # Check local state first
-        with _queue_lock:
-            job = _jobs.get(job_id)
-
-        if job and job["status"] == "complete" and job.get("audio_path"):
-            path = job["audio_path"]
-        else:
-            # Try shared volume
-            audio_volume.reload()
-            path = os.path.join(SHARED_AUDIO_DIR, f"{job_id}.mp3")
+        audio_volume.reload()
+        path = os.path.join(SHARED_AUDIO_DIR, f"{job_id}.mp3")
 
         if not os.path.exists(path):
             return JSONResponse(status_code=404, content={"error": "Audio not found"})
@@ -360,50 +281,36 @@ def web():
             filename="riff.mp3",
         )
 
-    # ---- Legacy direct endpoint (still useful for testing) ----
+    # ---- Legacy direct endpoint ----
     @web_app.post("/generate_file")
     def generate_file_legacy(req: SubmitRequest):
         """Synchronous generation — blocks until done."""
-        import random
-        from acestep.inference import GenerationParams, GenerationConfig, generate_music
+        job_id = str(uuid.uuid4())
+        jobs_store[job_id] = {"status": "queued"}
 
-        dit, llm = get_handlers()
+        # Call synchronously (blocks until GPU generation completes)
+        GenerateTrack().run.remote(job_id, req.model_dump())
 
-        params = GenerationParams(
-            caption=req.caption,
-            lyrics=req.lyrics,
-            duration=req.duration,
-            bpm=req.bpm,
-            keyscale=req.keyscale or "",
-            timesignature=req.timesignature or "",
-            instrumental=req.instrumental,
-            vocal_language=req.vocal_language or "unknown",
-            seed=req.seed or random.randint(0, 2**31 - 1),
-            inference_steps=8,
-            thinking=True,
-            shift=3.0,
-        )
-        config = GenerationConfig(batch_size=1, audio_format="mp3")
+        # Read the result
+        try:
+            job = jobs_store[job_id]
+        except KeyError:
+            return JSONResponse(status_code=500, content={"error": "Job disappeared"})
 
-        with _gpu_lock:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                result = generate_music(dit, llm, params, config, save_dir=tmpdir)
+        if job["status"] != "complete":
+            return JSONResponse(status_code=500, content={"error": job.get("error", "Generation failed")})
 
-        if not result.success:
-            return JSONResponse(status_code=500, content={"error": result.error})
+        audio_volume.reload()
+        path = os.path.join(SHARED_AUDIO_DIR, f"{job_id}.mp3")
+        if not os.path.exists(path):
+            return JSONResponse(status_code=500, content={"error": "Audio file not found"})
 
-        audio_info = result.audios[0]
-        audio_np = audio_info["tensor"].numpy()
-        if audio_np.ndim == 2:
-            audio_np = audio_np.T
-
-        buf = io.BytesIO()
-        sf.write(buf, audio_np, audio_info["sample_rate"], format="MP3")
-        buf.seek(0)
+        with open(path, "rb") as f:
+            audio_bytes = f.read()
 
         from fastapi.responses import Response
         return Response(
-            content=buf.read(),
+            content=audio_bytes,
             media_type="audio/mpeg",
             headers={"Content-Disposition": 'attachment; filename="riff.mp3"'},
         )

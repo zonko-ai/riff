@@ -94,21 +94,21 @@ type LanguageOption = {
 
 const LANGUAGES: LanguageOption[] = [
   { label: "Auto", value: "auto" },
-  { label: "English", value: "english" },
-  { label: "Spanish", value: "spanish" },
-  { label: "French", value: "french" },
-  { label: "Japanese", value: "japanese" },
-  { label: "Korean", value: "korean" },
-  { label: "Chinese", value: "chinese" },
-  { label: "Hindi", value: "hindi", experimental: true },
-  { label: "Portuguese", value: "portuguese" },
-  { label: "German", value: "german" },
-  { label: "Arabic", value: "arabic", experimental: true },
-  { label: "Italian", value: "italian" },
-  { label: "Russian", value: "russian" },
-  { label: "Thai", value: "thai", experimental: true },
-  { label: "Vietnamese", value: "vietnamese", experimental: true },
-  { label: "Turkish", value: "turkish", experimental: true },
+  { label: "English", value: "en" },
+  { label: "Spanish", value: "es" },
+  { label: "French", value: "fr" },
+  { label: "Japanese", value: "ja" },
+  { label: "Korean", value: "ko" },
+  { label: "Chinese", value: "zh" },
+  { label: "Hindi", value: "hi", experimental: true },
+  { label: "Portuguese", value: "pt" },
+  { label: "German", value: "de" },
+  { label: "Arabic", value: "ar", experimental: true },
+  { label: "Italian", value: "it" },
+  { label: "Russian", value: "ru" },
+  { label: "Thai", value: "th", experimental: true },
+  { label: "Vietnamese", value: "vi", experimental: true },
+  { label: "Turkish", value: "tr", experimental: true },
 ];
 
 const SECTION_MARKERS = ["[Verse]", "[Chorus]", "[Bridge]", "[Outro]", "[Intro]"] as const;
@@ -189,9 +189,9 @@ function CreatePageInner() {
 
   const buildContrastCaption = (base: string) => {
     const instructions: Record<ContrastLevel, string> = {
-      subtle: "Alternate take with subtle instrumentation changes and a softer groove.",
-      balanced: "Alternate take with different instrumentation, groove, and tempo.",
-      bold: "Reimagine in a different genre, tempo, and energy with new instrumentation.",
+      subtle: "VARIATION: Shift to a softer, more intimate arrangement. Reduce tempo by 10-15 BPM. Swap electric instruments for acoustic equivalents. Add warm, mellow textures. Keep the emotional core but make it gentler.",
+      balanced: "VARIATION: Transform the production style completely. If electronic, make it organic and acoustic. If acoustic, add synthesizers and electronic beats. Change the tempo feel significantly. Swap the main melodic instruments. Shift the era aesthetic (modern to vintage or vice versa).",
+      bold: "COMPLETE REIMAGINING: Opposite genre entirely. If it was upbeat, make it a slow ballad. If it was electronic, make it folk or orchestral. If it was intimate, make it anthemic and huge. Different instruments, different tempo, different energy, different era. Only keep the core emotional theme.",
     };
     return `${base}\n\n${instructions[contrastLevel]}`;
   };
@@ -1503,7 +1503,7 @@ function CreatePageInner() {
                             Time Signature
                           </label>
                           <div className="glass-pill flex">
-                            {["", "4/4", "3/4", "6/8"].map((ts) => (
+                            {["", "4", "3", "6"].map((ts) => (
                               <button
                                 key={ts}
                                 type="button"
@@ -1513,7 +1513,7 @@ function CreatePageInner() {
                                   timeSignature === ts && "active"
                                 )}
                               >
-                                {ts || "Auto"}
+                                {ts ? ({ "4": "4/4", "3": "3/4", "6": "6/8" } as Record<string, string>)[ts] : "Auto"}
                               </button>
                             ))}
                           </div>
