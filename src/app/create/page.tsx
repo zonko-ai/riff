@@ -1459,6 +1459,34 @@ function CreatePageInner() {
                     </div>
                   </div>
 
+                  {/* Language (vocal only) */}
+                  {!isInstrumental && (
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="smart-vocal-language"
+                        className="text-xs font-medium text-muted-foreground uppercase"
+                      >
+                        Language
+                      </label>
+                      <select
+                        id="smart-vocal-language"
+                        value={vocalLanguage}
+                        onChange={(e) => setVocalLanguage(e.target.value)}
+                        className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
+                      >
+                        {LANGUAGES.map((lang) => (
+                          <option
+                            key={lang.value}
+                            value={lang.value}
+                            className="bg-white"
+                          >
+                            {lang.label}{lang.experimental ? " (experimental)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {/* Lyrics density (vocal only) */}
                   {!isInstrumental && (
                     <div className="space-y-2">
