@@ -28,7 +28,7 @@ export function GeneratingState() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-5 py-8 px-6 glass rounded-3xl">
+    <div className="flex flex-col items-center gap-5 py-8 px-6 glass-elevated rounded-3xl">
       {/* Waveform skeleton */}
       <div className="flex items-end gap-1 h-14">
         {Array.from({ length: 16 }).map((_, i) => (

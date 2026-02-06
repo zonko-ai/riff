@@ -59,6 +59,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} ${landingBody.variable} antialiased`}
       >
         <div className="gradient-mesh" />
+        <div className="noise-overlay" aria-hidden="true" />
         <div className="relative z-10">{children}</div>
       </body>
     </html>

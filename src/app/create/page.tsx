@@ -1053,24 +1053,24 @@ function CreatePageInner() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 border-b border-black/[0.06] px-6 py-4">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-black/[0.06] px-6 py-4 sticky top-0 z-20">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-accent text-white flex items-center justify-center">
+            <div className="size-9 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_2px_8px_rgba(249,115,22,0.25)]">
               <Logo showText={false} className="text-white" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Riff</span>
+            <span className="text-lg font-semibold font-display tracking-tight">Riff</span>
           </Link>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-4 text-sm">
             <Link
               href="/"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Home
             </Link>
             <Link
               href="/library"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Library
             </Link>
@@ -1078,7 +1078,7 @@ function CreatePageInner() {
               href="https://github.com/ace-step/ACE-Step-1.5"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Powered by ACE-Step
             </a>
@@ -1091,14 +1091,14 @@ function CreatePageInner() {
         <div className="w-full max-w-3xl space-y-8">
           {/* Hero */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-balance">
+            <h1 className="text-[1.875rem] font-display tracking-tight text-balance leading-[1.2]">
               {state === "player"
                 ? "Your two tracks are ready"
                 : state === "preview-lyrics"
                 ? "Review your tracks"
                 : "Describe the music in your head"}
             </h1>
-            <p className="text-muted-foreground text-pretty">
+            <p className="text-[15px] text-muted-foreground text-pretty">
               {state === "player"
                 ? "Compare, download, or generate again"
                 : state === "preview-lyrics"
@@ -1112,9 +1112,9 @@ function CreatePageInner() {
             <div className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 {trackJobs.map((job, index) => (
-                  <div key={index} className="glass rounded-3xl p-6 space-y-4">
+                  <div key={index} className="glass-elevated rounded-3xl p-7 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground uppercase">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Track {index === 0 ? "A" : "B"}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -1130,7 +1130,7 @@ function CreatePageInner() {
                       <button
                         type="button"
                         onClick={() => handleRegenerateTrack(index)}
-                        className="px-3 py-1.5 rounded-full glass glass-hover"
+                        className="px-3 py-1.5 rounded-full glass glass-hover transition-colors"
                       >
                         Retake
                       </button>
@@ -1138,7 +1138,7 @@ function CreatePageInner() {
                         <button
                           type="button"
                           onClick={() => handleSaveTrack(index)}
-                          className="px-3 py-1.5 rounded-full glass glass-hover"
+                          className="px-3 py-1.5 rounded-full glass glass-hover transition-colors"
                         >
                           Save to Library
                         </button>
@@ -1148,7 +1148,7 @@ function CreatePageInner() {
                   </div>
                 ))}
               </div>
-              <div className="glass rounded-3xl p-6 space-y-4">
+              <div className="glass-elevated rounded-3xl p-7 space-y-4">
                 <div className="text-sm font-medium">Iterate</div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -1203,7 +1203,7 @@ function CreatePageInner() {
             <div className="space-y-4">
               {anyGenerating && <GeneratingState />}
               {anyQueued && (
-                <div className="glass rounded-3xl p-6 space-y-4">
+                <div className="glass-elevated rounded-3xl p-7 space-y-4">
                   <div className="text-sm font-medium">Queue status</div>
                   {trackJobs.map((job, index) => (
                     <div
@@ -1226,14 +1226,14 @@ function CreatePageInner() {
               )}
               <button
                 onClick={handleCancel}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5 rounded-xl glass glass-hover"
               >
                 Cancel
               </button>
             </div>
 
           ) : state === "writing-lyrics" ? (
-            <div className="flex flex-col items-center gap-4 py-8">
+            <div className="glass-elevated rounded-3xl p-8 flex flex-col items-center gap-4">
               <div className="flex items-center gap-2">
                 <svg
                   width="20"
@@ -1267,9 +1267,9 @@ function CreatePageInner() {
             <div className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 {previewTracks.map((track, index) => (
-                  <div key={index} className="glass rounded-3xl p-6 space-y-5">
+                  <div key={index} className="glass-elevated rounded-3xl p-7 space-y-5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground uppercase">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Track {index === 0 ? "A" : "B"}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -1278,7 +1278,7 @@ function CreatePageInner() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Style
                       </label>
                       <textarea
@@ -1297,7 +1297,7 @@ function CreatePageInner() {
 
                     {!track.instrumental && (
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground uppercase">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Lyrics
                         </label>
                         <textarea
@@ -1391,10 +1391,10 @@ function CreatePageInner() {
 
               {/* ─── Smart Mode Form ─── */}
               {mode === "smart" ? (
-                <div className="glass rounded-3xl p-6 space-y-5">
+                <div className="glass-elevated rounded-3xl p-7 space-y-6">
                   {/* Vibe pills */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Vibe
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -1415,7 +1415,7 @@ function CreatePageInner() {
                   <div className="space-y-2">
                     <label
                       htmlFor="smart-prompt"
-                      className="text-xs font-medium text-muted-foreground uppercase"
+                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                     >
                       What kind of song do you want?
                     </label>
@@ -1432,7 +1432,7 @@ function CreatePageInner() {
 
                   {/* Vocal / Instrumental toggle */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Type
                     </label>
                     <div className="glass-pill flex">
@@ -1464,7 +1464,7 @@ function CreatePageInner() {
                     <div className="space-y-1">
                       <label
                         htmlFor="smart-vocal-language"
-                        className="text-xs font-medium text-muted-foreground uppercase"
+                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                       >
                         Language
                       </label>
@@ -1490,7 +1490,7 @@ function CreatePageInner() {
                   {/* Lyrics density (vocal only) */}
                   {!isInstrumental && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Lyrics density
                       </label>
                       <div className="glass-pill flex">
@@ -1513,7 +1513,7 @@ function CreatePageInner() {
 
                   {/* Variants */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Two-track variation
                     </label>
                     <div className="glass-pill flex">
@@ -1554,7 +1554,7 @@ function CreatePageInner() {
                   {/* Duration slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Duration
                       </label>
                       <span className="text-sm font-mono text-foreground tabular-nums">
@@ -1595,10 +1595,10 @@ function CreatePageInner() {
                 </div>
 
               ) : (
-                <div className="glass rounded-3xl p-6 space-y-5">
+                <div className="glass-elevated rounded-3xl p-7 space-y-6">
                   {/* Genre quick picks */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Genre
                     </label>
                     <input
@@ -1619,7 +1619,7 @@ function CreatePageInner() {
                   <div className="space-y-2">
                     <label
                       htmlFor="caption"
-                      className="text-xs font-medium text-muted-foreground uppercase"
+                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                     >
                       Music description
                     </label>
@@ -1686,7 +1686,7 @@ function CreatePageInner() {
                     </button>
 
                     {showMusicalControls && (
-                      <div className="space-y-4 pt-2">
+                      <div className="glass-subtle rounded-xl p-4 space-y-4">
                         {/* BPM */}
                         <div className="space-y-1">
                           <label htmlFor="bpm" className="text-xs text-muted-foreground">
@@ -1791,7 +1791,7 @@ function CreatePageInner() {
                     </button>
 
                     {showAdvancedGen && (
-                      <div className="space-y-4 pt-2">
+                      <div className="glass-subtle rounded-xl p-4 space-y-4">
                         {/* Thinking toggle */}
                         <div className="flex items-center gap-3">
                           <label className="text-xs text-muted-foreground flex-1">
@@ -1958,7 +1958,7 @@ function CreatePageInner() {
 
                   {/* Vocal / Instrumental toggle */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Type
                     </label>
                     <div className="glass-pill flex">
@@ -1990,7 +1990,7 @@ function CreatePageInner() {
                     <div className="space-y-1">
                       <label
                         htmlFor="vocal-language"
-                        className="text-xs font-medium text-muted-foreground uppercase"
+                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                       >
                         Language
                       </label>
@@ -2019,7 +2019,7 @@ function CreatePageInner() {
                   {/* Lyrics editor (vocal only) */}
                   {!isInstrumental && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Lyrics (optional)
                       </label>
                       <div className="flex flex-wrap gap-1.5">
@@ -2049,7 +2049,7 @@ function CreatePageInner() {
                   {/* Lyrics density (vocal only) */}
                   {!isInstrumental && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Lyrics density
                       </label>
                       <div className="glass-pill flex">
@@ -2072,7 +2072,7 @@ function CreatePageInner() {
 
                   {/* Two-track variations */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Two-track variation
                     </label>
                     <div className="glass-pill flex">
@@ -2113,7 +2113,7 @@ function CreatePageInner() {
                   {/* Duration slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Duration
                       </label>
                       <span className="text-sm font-mono text-foreground tabular-nums">
@@ -2159,19 +2159,20 @@ function CreatePageInner() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 border-t border-black/[0.06] px-6 py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Free &amp; open-source. Built with{" "}
-          <a
-            href="https://github.com/ace-step/ACE-Step-1.5"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-foreground transition-colors"
-          >
-            ACE-Step v1.5
-          </a>
-          . Saved locally in your browser.
-        </p>
+      <footer className="px-6 py-8 border-t border-black/[0.04]">
+        <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span className="font-display font-semibold text-foreground">Riff</span>
+          <span>Free &amp; open-source · Built on{" "}
+            <a
+              href="https://github.com/ace-step/ACE-Step-1.5"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground transition-colors"
+            >
+              ACE-Step v1.5
+            </a>
+          </span>
+        </div>
       </footer>
     </div>
   );

@@ -143,7 +143,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
       />
 
       {/* Visualizer */}
-      <div className="relative h-20 w-full rounded-2xl glass overflow-hidden">
+      <div className="relative h-20 w-full rounded-2xl glass overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]">
         <canvas
           ref={canvasRef}
           width={600}
@@ -174,9 +174,9 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
           aria-label={isPlaying ? "Pause" : "Play"}
           className={cn(
             "flex items-center justify-center size-12 rounded-full",
-            "bg-accent text-white transition-transform",
+            "bg-accent text-white transition-all duration-200",
             "hover:scale-105 active:scale-95",
-            "shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+            "shadow-[0_2px_8px_rgba(249,115,22,0.3),0_4px_16px_rgba(249,115,22,0.15)]"
           )}
         >
           {isPlaying ? (
@@ -223,7 +223,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
         {onReset && (
           <button
             onClick={onReset}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm transition-colors hover:text-foreground"
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm hover:text-foreground"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M2 8a6 6 0 0 1 10.3-4.2M14 2v4h-4M14 8a6 6 0 0 1-10.3 4.2M2 14v-4h4" />

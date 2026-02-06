@@ -12,7 +12,7 @@ export function QueueStatus({ position, status, onCancel }: QueueStatusProps) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 py-8 px-6 glass rounded-3xl">
+    <div className="flex flex-col items-center gap-4 py-8 px-6 glass-elevated rounded-3xl">
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (

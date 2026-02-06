@@ -21,7 +21,7 @@ export function HeroPrompt() {
   };
 
   return (
-    <div className="glass rounded-3xl p-5 space-y-4">
+    <div className="glass-elevated rounded-3xl p-6 space-y-4">
       <div className="text-xs text-muted-foreground uppercase">Try it now</div>
       <textarea
         value={value}
