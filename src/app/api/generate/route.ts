@@ -36,7 +36,11 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-    return NextResponse.json(data); // { job_id, position }
+    console.log("[generate] Submitted job:", data.job_id);
+    return NextResponse.json({
+      ...data,
+      _debug: { payload, modal_url: `${MODAL_API_URL}/queue/submit` },
+    });
   } catch (err) {
     console.error("Submit error:", err);
     return NextResponse.json(

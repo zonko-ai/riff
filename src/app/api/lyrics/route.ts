@@ -206,9 +206,23 @@ Only respond with valid JSON, no markdown or extra text.`;
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
 
+    console.log("[lyrics] LLM response caption:", parsed.caption);
+    console.log("[lyrics] LLM response lyrics length:", parsed.lyrics?.length);
+
     return NextResponse.json({
       caption: parsed.caption,
       lyrics: parsed.lyrics,
+      _debug: {
+        systemPrompt,
+        userPrompt: prompt,
+        model: "grok-3-fast",
+        temperature: 0.85,
+        variant: variant || "primary",
+        vibe: vibe || null,
+        lyricsDensity: lyricsDensity || "moderate",
+        contrast: contrast || null,
+        rawResponse: content,
+      },
     });
   } catch (err) {
     console.error("Lyrics generation error:", err);

@@ -224,9 +224,12 @@ function CreatePageInner() {
   const startPolling = useCallback(
     (ids: string[]) => {
       stopPolling();
+      console.log("%c[RIFF] Polling started", "color: #6366f1; font-weight: bold", "job_ids:", ids);
+      let pollCount = 0;
 
       const poll = async () => {
         try {
+          pollCount++;
           const updates = await Promise.all(
             ids.map(async (id) => {
               const res = await fetch(`/api/generate?job_id=${id}`);
@@ -235,6 +238,9 @@ function CreatePageInner() {
               return { id, ...data };
             })
           );
+
+          const statuses = updates.map((u) => `${u.id?.substring(0, 8)}=${u.status}`).join(", ");
+          console.log(`%c[RIFF] Poll #${pollCount}`, "color: #6366f1", statuses);
 
           const currentJobs = trackJobsRef.current;
           const nextJobs = currentJobs.map<TrackJob>((job) => {
@@ -321,12 +327,15 @@ function CreatePageInner() {
           const anyFailed = nextJobs.some((job) => job.status === "failed");
 
           if (allComplete) {
+            console.log("%c[RIFF] All tracks complete!", "color: #10b981; font-weight: bold; font-size: 14px");
             stopPolling();
             setState("player");
             return;
           }
 
           if (anyFailed) {
+            const failedJobs = nextJobs.filter((j) => j.status === "failed");
+            console.error("[RIFF] Track(s) failed:", failedJobs.map((j) => ({ id: j.id, error: j.error })));
             stopPolling();
             setError("One of the tracks failed to generate.");
             setState("compose");
@@ -386,24 +395,49 @@ function CreatePageInner() {
       baseCaption?: string;
       contrast?: ContrastLevel;
     }) => {
+      const payload = {
+        prompt: opts.prompt,
+        vibe: opts.vibe || undefined,
+        lyricsDensity: opts.lyricsDensity,
+        variant: opts.variant,
+        baseLyrics: opts.baseLyrics,
+        baseCaption: opts.baseCaption,
+        contrast: opts.contrast,
+      };
+      console.group(`%c[RIFF] generateLyrics (${opts.variant || "primary"})`, "color: #f59e0b; font-weight: bold");
+      console.log("Request payload:", payload);
+      console.groupEnd();
+
       const res = await fetch("/api/lyrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: opts.prompt,
-          vibe: opts.vibe || undefined,
-          lyricsDensity: opts.lyricsDensity,
-          variant: opts.variant,
-          baseLyrics: opts.baseLyrics,
-          baseCaption: opts.baseCaption,
-          contrast: opts.contrast,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to generate lyrics");
       }
-      return res.json();
+      const result = await res.json();
+
+      console.group(`%c[RIFF] Lyrics API response (${opts.variant || "primary"})`, "color: #10b981; font-weight: bold");
+      console.log("Caption:", result.caption);
+      console.log("Lyrics:", result.lyrics);
+      if (result._debug) {
+        console.group("LLM Debug");
+        console.log("Model:", result._debug.model);
+        console.log("Temperature:", result._debug.temperature);
+        console.log("Vibe:", result._debug.vibe);
+        console.log("Density:", result._debug.lyricsDensity);
+        console.log("Variant:", result._debug.variant);
+        console.log("Contrast:", result._debug.contrast);
+        console.log("System prompt:", result._debug.systemPrompt);
+        console.log("User prompt:", result._debug.userPrompt);
+        console.log("Raw LLM response:", result._debug.rawResponse);
+        console.groupEnd();
+      }
+      console.groupEnd();
+
+      return result;
     },
     []
   );
@@ -412,30 +446,52 @@ function CreatePageInner() {
     async (tracks: TrackDraft[]) => {
       setState("queued");
       setError(null);
+
+      console.group("%c[RIFF] Submit Tracks to GPU", "color: #ef4444; font-weight: bold; font-size: 14px");
+
       const submissions = await Promise.allSettled(
-        tracks.map(async (track) => {
+        tracks.map(async (track, idx) => {
+          const payload = {
+            caption: track.caption,
+            lyrics: track.instrumental ? "[Instrumental]" : track.lyrics,
+            duration: track.duration,
+            instrumental: track.instrumental,
+            bpm: track.bpm ? parseInt(track.bpm, 10) : null,
+            keyscale: track.keyscale || null,
+            timesignature: track.timesignature || null,
+            vocal_language: track.vocal_language || null,
+            seed: track.seed ? parseInt(track.seed, 10) : null,
+          };
+          console.group(`Track ${idx === 0 ? "A" : "B"} → /api/generate`);
+          console.log("Caption:", payload.caption);
+          console.log("Lyrics:", payload.lyrics?.substring(0, 200) + (payload.lyrics && payload.lyrics.length > 200 ? "..." : ""));
+          console.log("Duration:", payload.duration, "s");
+          console.log("Instrumental:", payload.instrumental);
+          console.log("BPM:", payload.bpm);
+          console.log("Key:", payload.keyscale);
+          console.log("Time sig:", payload.timesignature);
+          console.log("Language:", payload.vocal_language);
+          console.log("Seed:", payload.seed);
+          console.groupEnd();
+
           const res = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              caption: track.caption,
-              lyrics: track.instrumental ? "[Instrumental]" : track.lyrics,
-              duration: track.duration,
-              instrumental: track.instrumental,
-              bpm: track.bpm ? parseInt(track.bpm, 10) : null,
-              keyscale: track.keyscale || null,
-              timesignature: track.timesignature || null,
-              vocal_language: track.vocal_language || null,
-              seed: track.seed ? parseInt(track.seed, 10) : null,
-            }),
+            body: JSON.stringify(payload),
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.error || "Failed to submit");
           }
-          return res.json();
+          const result = await res.json();
+          console.log(`Track ${idx === 0 ? "A" : "B"} submitted — job_id: ${result.job_id}`);
+          if (result._debug) {
+            console.log(`Track ${idx === 0 ? "A" : "B"} Modal payload:`, result._debug.payload);
+          }
+          return result;
         })
       );
+      console.groupEnd();
 
       const nextJobs: TrackJob[] = submissions.map((result) => {
         if (result.status === "fulfilled") {
@@ -498,19 +554,37 @@ function CreatePageInner() {
       return;
     }
 
+    console.group("%c[RIFF] Smart Generate", "color: #8b5cf6; font-weight: bold; font-size: 14px");
+    console.log("Prompt:", prompt);
+    console.log("Vibe:", vibe);
+    console.log("Instrumental:", isInstrumental);
+    console.log("Lyrics density:", lyricsDensity);
+    console.log("Contrast level:", contrastLevel);
+    console.log("Alt lyrics:", altLyrics);
+    console.log("Duration:", duration);
+    console.log("Seed:", seed);
+
     const seedA = parseSeed(seed);
     const seedB = seedA !== undefined ? seedA + 1 : undefined;
+    console.log("Parsed seeds:", { seedA, seedB });
 
     if (isInstrumental) {
       const draftA = makeDraft(prompt, "[Instrumental]", duration, true, seedA);
-      const draftB = makeDraft(buildContrastCaption(prompt), "[Instrumental]", duration, true, seedB);
+      const contrastCaption = buildContrastCaption(prompt);
+      console.log("Track A caption:", prompt);
+      console.log("Track B contrast caption:", contrastCaption);
+      const draftB = makeDraft(contrastCaption, "[Instrumental]", duration, true, seedB);
       setPreviewTracks([draftA, draftB]);
+      console.log("Draft A:", draftA);
+      console.log("Draft B:", draftB);
+      console.groupEnd();
       setState("preview-lyrics");
       return;
     }
 
     setState("writing-lyrics");
     try {
+      console.log("Generating primary lyrics...");
       const primary = await generateLyrics({
         prompt,
         vibe,
@@ -518,8 +592,14 @@ function CreatePageInner() {
       });
 
       const finalDuration = primary.duration || duration;
-      const secondary = altLyrics
-        ? await generateLyrics({
+      console.log("Primary result — caption:", primary.caption);
+      console.log("Primary result — lyrics:", primary.lyrics);
+      console.log("Final duration:", finalDuration);
+
+      let secondary;
+      if (altLyrics) {
+        console.log("Generating alternate lyrics with contrast:", contrastLevel);
+        secondary = await generateLyrics({
             prompt,
             vibe,
             lyricsDensity,
@@ -527,8 +607,14 @@ function CreatePageInner() {
             baseLyrics: primary.lyrics,
             baseCaption: primary.caption,
             contrast: contrastLevel,
-          })
-        : { ...primary, caption: buildContrastCaption(primary.caption) };
+          });
+        console.log("Alternate result — caption:", secondary.caption);
+        console.log("Alternate result — lyrics:", secondary.lyrics);
+      } else {
+        const contrastCaption = buildContrastCaption(primary.caption);
+        console.log("No alt lyrics — using contrast caption:", contrastCaption);
+        secondary = { ...primary, caption: contrastCaption };
+      }
 
       const draftA = makeDraft(primary.caption, primary.lyrics, finalDuration, false, seedA);
       const draftB = makeDraft(
@@ -539,10 +625,16 @@ function CreatePageInner() {
         seedB
       );
 
+      console.log("Final Draft A:", draftA);
+      console.log("Final Draft B:", draftB);
+      console.groupEnd();
+
       setDuration(finalDuration);
       setPreviewTracks([draftA, draftB]);
       setState("preview-lyrics");
     } catch (err) {
+      console.error("Smart generate failed:", err);
+      console.groupEnd();
       setError(err instanceof Error ? err.message : "Failed to generate lyrics");
       setState("compose");
     }
@@ -555,16 +647,38 @@ function CreatePageInner() {
       return;
     }
 
+    console.group("%c[RIFF] Pro Generate", "color: #ec4899; font-weight: bold; font-size: 14px");
+    console.log("Caption:", caption);
+    console.log("Style tags:", styleTags);
+    console.log("Avoid tags:", negativeTags);
+    console.log("Instrumental:", isInstrumental);
+    console.log("Lyrics density:", lyricsDensity);
+    console.log("Contrast level:", contrastLevel);
+    console.log("Alt lyrics:", altLyrics);
+    console.log("Duration:", duration);
+    console.log("BPM:", bpm);
+    console.log("Key:", musicalKey);
+    console.log("Time sig:", timeSignature);
+    console.log("Language:", vocalLanguage);
+    console.log("Seed:", seed);
+    console.log("Manual lyrics:", lyrics ? `${lyrics.length} chars` : "(none)");
+
     const baseCaption = buildCaptionWithTags(caption);
     const altCaption = buildContrastCaption(baseCaption);
     const seedA = parseSeed(seed);
     const seedB = seedA !== undefined ? seedA + 1 : undefined;
 
+    console.log("Built base caption:", baseCaption);
+    console.log("Built alt caption:", altCaption);
+    console.log("Parsed seeds:", { seedA, seedB });
+
     if (isInstrumental) {
-      setPreviewTracks([
-        makeDraft(baseCaption, "[Instrumental]", duration, true, seedA),
-        makeDraft(altCaption, "[Instrumental]", duration, true, seedB),
-      ]);
+      const draftA = makeDraft(baseCaption, "[Instrumental]", duration, true, seedA);
+      const draftB = makeDraft(altCaption, "[Instrumental]", duration, true, seedB);
+      console.log("Instrumental Draft A:", draftA);
+      console.log("Instrumental Draft B:", draftB);
+      console.groupEnd();
+      setPreviewTracks([draftA, draftB]);
       setState("preview-lyrics");
       return;
     }
@@ -576,6 +690,7 @@ function CreatePageInner() {
     if (!primaryLyrics) {
       setState("writing-lyrics");
       try {
+        console.log("No manual lyrics — generating from caption...");
         const primary = await generateLyrics({
           prompt: baseCaption,
           lyricsDensity,
@@ -584,8 +699,10 @@ function CreatePageInner() {
         primaryLyrics = primary.lyrics;
         secondaryLyrics = primary.lyrics;
         selectedDuration = finalDuration;
+        console.log("Primary lyrics generated, duration:", finalDuration);
 
         if (altLyrics) {
+          console.log("Generating alternate lyrics with contrast:", contrastLevel);
           const secondary = await generateLyrics({
             prompt: baseCaption,
             lyricsDensity,
@@ -595,10 +712,13 @@ function CreatePageInner() {
             contrast: contrastLevel,
           });
           secondaryLyrics = secondary.lyrics;
+          console.log("Alternate lyrics generated");
         }
 
         setDuration(finalDuration);
       } catch (err) {
+        console.error("Pro generate lyrics failed:", err);
+        console.groupEnd();
         setError(err instanceof Error ? err.message : "Failed to generate lyrics");
         setState("compose");
         return;
@@ -606,6 +726,7 @@ function CreatePageInner() {
     } else if (altLyrics) {
       setState("writing-lyrics");
       try {
+        console.log("Manual lyrics provided, generating alternate...");
         const secondary = await generateLyrics({
           prompt: baseCaption,
           variant: "alternate",
@@ -614,17 +735,25 @@ function CreatePageInner() {
           contrast: contrastLevel,
         });
         secondaryLyrics = secondary.lyrics;
+        console.log("Alternate lyrics generated");
       } catch (err) {
+        console.error("Pro generate alt lyrics failed:", err);
+        console.groupEnd();
         setError(err instanceof Error ? err.message : "Failed to generate lyrics");
         setState("compose");
         return;
       }
+    } else {
+      console.log("Using manual lyrics for both tracks");
     }
 
-    setPreviewTracks([
-      makeDraft(baseCaption, primaryLyrics, selectedDuration, false, seedA),
-      makeDraft(altCaption, secondaryLyrics || primaryLyrics, selectedDuration, false, seedB),
-    ]);
+    const draftA = makeDraft(baseCaption, primaryLyrics, selectedDuration, false, seedA);
+    const draftB = makeDraft(altCaption, secondaryLyrics || primaryLyrics, selectedDuration, false, seedB);
+    console.log("Final Draft A:", draftA);
+    console.log("Final Draft B:", draftB);
+    console.groupEnd();
+
+    setPreviewTracks([draftA, draftB]);
     setState("preview-lyrics");
   };
 
@@ -647,33 +776,45 @@ function CreatePageInner() {
     const track = previewTracksRef.current[index];
     if (!track) return;
 
+    const trackLabel = index === 0 ? "A" : "B";
+    console.group(`%c[RIFF] Regenerate Track ${trackLabel}`, "color: #f97316; font-weight: bold; font-size: 14px");
+
     setError(null);
     setState("queued");
 
     const currentSeed = track.seed ? parseSeed(track.seed) : undefined;
     const regenSeed = currentSeed !== undefined ? currentSeed + 17 : undefined;
 
+    const payload = {
+      caption: track.caption,
+      lyrics: track.instrumental ? "[Instrumental]" : track.lyrics,
+      duration: track.duration,
+      instrumental: track.instrumental,
+      bpm: track.bpm ? parseInt(track.bpm, 10) : null,
+      keyscale: track.keyscale || null,
+      timesignature: track.timesignature || null,
+      vocal_language: track.vocal_language || null,
+      seed: regenSeed ?? null,
+    };
+    console.log("Caption:", payload.caption);
+    console.log("Lyrics:", payload.lyrics?.substring(0, 200));
+    console.log("Duration:", payload.duration, "s");
+    console.log("Seed:", currentSeed, "→", regenSeed);
+    console.log("Full payload:", payload);
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caption: track.caption,
-          lyrics: track.instrumental ? "[Instrumental]" : track.lyrics,
-          duration: track.duration,
-          instrumental: track.instrumental,
-          bpm: track.bpm ? parseInt(track.bpm, 10) : null,
-          keyscale: track.keyscale || null,
-          timesignature: track.timesignature || null,
-          vocal_language: track.vocal_language || null,
-          seed: regenSeed ?? null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to submit");
       }
       const data = await res.json();
+      console.log("Submitted — job_id:", data.job_id);
+      console.groupEnd();
 
       setTrackJobs((prev) =>
         prev.map((job, idx) =>
@@ -699,6 +840,8 @@ function CreatePageInner() {
         startPolling(nextIds);
       }
     } catch (err) {
+      console.error(`[RIFF] Regenerate Track ${trackLabel} failed:`, err);
+      console.groupEnd();
       setError(err instanceof Error ? err.message : "Failed to submit");
       setState("compose");
     }
