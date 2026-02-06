@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-dvh bg-background relative">
+    <div className="min-h-dvh bg-background relative font-body">
       <div className="pointer-events-none absolute inset-0 opacity-80" aria-hidden="true">
         <svg className="w-full h-full text-black/10" viewBox="0 0 800 800">
           <defs>
