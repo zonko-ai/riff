@@ -390,6 +390,7 @@ function CreatePageInner() {
       prompt: string;
       vibe?: string | null;
       lyricsDensity?: LyricsDensity;
+      duration?: number;
       variant?: "alternate";
       baseLyrics?: string;
       baseCaption?: string;
@@ -399,6 +400,7 @@ function CreatePageInner() {
         prompt: opts.prompt,
         vibe: opts.vibe || undefined,
         lyricsDensity: opts.lyricsDensity,
+        duration: opts.duration,
         variant: opts.variant,
         baseLyrics: opts.baseLyrics,
         baseCaption: opts.baseCaption,
@@ -589,6 +591,7 @@ function CreatePageInner() {
         prompt,
         vibe,
         lyricsDensity,
+        duration,
       });
 
       const finalDuration = primary.duration || duration;
@@ -603,6 +606,7 @@ function CreatePageInner() {
             prompt,
             vibe,
             lyricsDensity,
+            duration,
             variant: "alternate",
             baseLyrics: primary.lyrics,
             baseCaption: primary.caption,
@@ -694,6 +698,7 @@ function CreatePageInner() {
         const primary = await generateLyrics({
           prompt: baseCaption,
           lyricsDensity,
+          duration,
         });
         const finalDuration = primary.duration || duration;
         primaryLyrics = primary.lyrics;
@@ -706,6 +711,7 @@ function CreatePageInner() {
           const secondary = await generateLyrics({
             prompt: baseCaption,
             lyricsDensity,
+            duration,
             variant: "alternate",
             baseLyrics: primary.lyrics,
             baseCaption: primary.caption,
@@ -729,6 +735,7 @@ function CreatePageInner() {
         console.log("Manual lyrics provided, generating alternate...");
         const secondary = await generateLyrics({
           prompt: baseCaption,
+          duration,
           variant: "alternate",
           baseLyrics: primaryLyrics,
           baseCaption: baseCaption,
@@ -916,6 +923,7 @@ function CreatePageInner() {
     try {
       const response = await generateLyrics({
         prompt: `Rewrite only the chorus for this song. Return full lyrics with section markers.`,
+        duration: track.duration,
         variant: "alternate",
         baseLyrics: track.lyrics,
         baseCaption: track.caption,

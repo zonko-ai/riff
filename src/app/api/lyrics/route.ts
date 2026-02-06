@@ -15,11 +15,14 @@ export async function POST(req: NextRequest) {
       prompt,
       vibe,
       lyricsDensity,
+      duration,
       variant,
       baseLyrics,
       baseCaption,
       contrast,
     } = await req.json();
+
+    const targetDuration = Math.min(Math.max(Number(duration) || 30, 10), 120);
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -28,12 +31,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const densityMap: Record<string, string> = {
-      light: "Write minimal lyrics — just one verse and a short chorus, leaving room for instrumental sections. About 20-30 seconds of vocals.",
-      moderate: "Write 2 verses and a full chorus. Good balance of vocals and instrumentals. About 40-60 seconds of vocal content.",
-      heavy: "Write dense lyrics — 2-3 verses, repeated chorus, and a bridge. Lots of vocal content for 60-90+ seconds.",
+    const getDensityInstruction = (density: string, dur: number) => {
+      if (dur <= 30) {
+        const map: Record<string, string> = {
+          light: `The song is ${dur} seconds. Write minimal lyrics — just one short verse and a brief hook. About 10-15 seconds of vocals, rest instrumental.`,
+          moderate: `The song is ${dur} seconds. Write one verse and a short chorus. About 15-20 seconds of vocal content.`,
+          heavy: `The song is ${dur} seconds. Write a verse and full chorus packed with lyrics. About 20-25 seconds of vocal content.`,
+        };
+        return map[density] || map.moderate;
+      }
+      if (dur <= 60) {
+        const map: Record<string, string> = {
+          light: `The song is ${dur} seconds. Write one verse and a short chorus, leaving room for instrumental sections. About 20-30 seconds of vocals.`,
+          moderate: `The song is ${dur} seconds. Write 2 verses and a full chorus. Good balance of vocals and instrumentals. About 30-40 seconds of vocal content.`,
+          heavy: `The song is ${dur} seconds. Write 2 verses, a repeated chorus, and a bridge. About 40-50 seconds of vocal content.`,
+        };
+        return map[density] || map.moderate;
+      }
+      // 60-120s
+      const map: Record<string, string> = {
+        light: `The song is ${dur} seconds. Write 2 verses and a chorus with instrumental breaks between sections. About 40-50 seconds of vocals.`,
+        moderate: `The song is ${dur} seconds. Write 2-3 verses, a repeated chorus, and a bridge. Good balance. About 60-80 seconds of vocal content.`,
+        heavy: `The song is ${dur} seconds. Write 3 verses, repeated chorus, a bridge, and an outro. Dense vocal content filling most of the song. About 80-100 seconds of vocals.`,
+      };
+      return map[density] || map.moderate;
     };
-    const densityInstruction = densityMap[lyricsDensity || "moderate"];
+    const densityInstruction = getDensityInstruction(lyricsDensity || "moderate", targetDuration);
 
     // For alternate versions, we want COMPLETELY different musical direction
     const contrastMap: Record<string, string> = {
@@ -175,7 +198,7 @@ Only respond with valid JSON, no markdown or extra text.`;
         Authorization: `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "grok-3-fast",
+        model: "grok-4-1-fast-non-reasoning",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -215,11 +238,13 @@ Only respond with valid JSON, no markdown or extra text.`;
       _debug: {
         systemPrompt,
         userPrompt: prompt,
-        model: "grok-3-fast",
+        model: "grok-4-1-fast-non-reasoning",
         temperature: 0.85,
         variant: variant || "primary",
         vibe: vibe || null,
         lyricsDensity: lyricsDensity || "moderate",
+        targetDuration: targetDuration,
+        densityInstruction,
         contrast: contrast || null,
         rawResponse: content,
       },
