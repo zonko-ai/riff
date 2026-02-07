@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       baseCaption,
       contrast,
       language,
+      voiceGender,
     } = await req.json();
 
     const targetDuration = Math.min(Math.max(Number(duration) || 30, 10), 120);
@@ -34,6 +35,10 @@ export async function POST(req: NextRequest) {
     const langName = language ? LANG_NAMES[language] || language : null;
     const languageInstruction = langName && langName !== "English"
       ? `\n\nLANGUAGE: Write ALL lyrics in ${langName}. The lyrics MUST be in ${langName} script/language, not English. The caption should still be in English (it describes the music style), but include "${langName} vocals" or "${langName} singing" in the vocal style section of the caption.`
+      : "";
+
+    const voiceInstruction = voiceGender && voiceGender !== "auto"
+      ? `\n\nVOICE: The vocalist is ${voiceGender}. The caption MUST include "${voiceGender} vocal" in the vocal style. All vocal references must be ${voiceGender}.`
       : "";
 
     if (!prompt || typeof prompt !== "string") {
@@ -134,7 +139,7 @@ Keep 6-10 syllables per line for natural rhythm.
 Use CAPS for emphasized words: "We ARE the champions"
 Use (parentheses) for backing vocals: "Rise up (rise up)"
 
-${densityInstruction}${languageInstruction}
+${densityInstruction}${languageInstruction}${voiceInstruction}
 
 Respond in this exact JSON format:
 {
@@ -190,7 +195,7 @@ LINE FORMATTING:
 - Use (parentheses) for backing vocals/echoes: "Never let go (let go)"
 - Blank line between sections
 
-${densityInstruction}
+${densityInstruction}${languageInstruction}${voiceInstruction}
 
 The lyrics should be personal, emotional, and match the user's description.
 If names are mentioned, weave them naturally into the lyrics.
@@ -259,6 +264,7 @@ Only respond with valid JSON, no markdown or extra text.`;
         densityInstruction,
         contrast: contrast || null,
         language: language || null,
+        voiceGender: voiceGender || null,
         rawResponse: content,
       },
     });

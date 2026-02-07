@@ -75,7 +75,7 @@ export default function LibraryPage() {
           </Link>
           <div className="flex items-center gap-6 text-sm">
             <Link
-              href="/create"
+              href="/"
               className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Create
@@ -103,7 +103,7 @@ export default function LibraryPage() {
               </p>
             </div>
             <Link
-              href="/create"
+              href="/"
               className="rounded-xl px-6 py-3 btn-primary text-white text-sm font-bold flex items-center gap-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -125,7 +125,7 @@ export default function LibraryPage() {
                 Generate your first tracks and they will appear here automatically.
               </p>
               <Link
-                href="/create"
+                href="/"
                 className="inline-flex rounded-xl px-6 py-3 btn-primary text-white text-sm font-semibold gap-2"
               >
                 Create your first track
@@ -134,29 +134,25 @@ export default function LibraryPage() {
           ) : (
             <div className="grid gap-4">
               {tracks.map((track, trackIndex) => (
-                <div key={track.id} className="glass-elevated rounded-2xl p-4 md:p-6 space-y-4">
-                  <div className="flex items-center gap-4 md:gap-6">
-                    <div className="size-10 rounded-xl bg-accent/8 text-accent flex items-center justify-center shrink-0 font-mono font-bold text-sm">
+                <div key={track.id} className="glass-elevated rounded-2xl p-4 md:p-6 space-y-3">
+                  {/* Header: number, title, badge, duration, date */}
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="size-9 rounded-lg bg-accent/8 text-accent flex items-center justify-center shrink-0 font-mono font-bold text-xs">
                       {String(trackIndex + 1).padStart(2, "0")}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg md:text-xl font-bold truncate">{track.title}</h3>
-                        <span className="px-2 py-0.5 rounded-full bg-black/5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">MP3</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate mt-0.5">{track.caption}</p>
-                    </div>
-                    <div className="hidden md:flex flex-col items-end shrink-0">
-                      <span className="font-mono font-medium">{Math.round(track.duration)}s</span>
-                      <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        {new Date(track.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
+                    <h3 className="text-base md:text-lg font-bold truncate flex-1 min-w-0">{track.title}</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-black/5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">MP3</span>
+                    <span className="hidden md:inline text-sm font-mono text-muted-foreground shrink-0">{Math.round(track.duration)}s</span>
+                    <span className="hidden md:inline text-[11px] text-muted-foreground shrink-0">
+                      {new Date(track.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
 
-                  <AudioPlayer src={audioUrls[track.id]} />
+                  {/* Player */}
+                  <AudioPlayer src={audioUrls[track.id]} showActions={false} />
 
-                  <div className="flex flex-wrap gap-2">
+                  {/* Actions row */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <a
                       href={audioUrls[track.id]}
                       download={`${track.title}.mp3`}
@@ -171,38 +167,39 @@ export default function LibraryPage() {
                     >
                       Share
                     </button>
+                    <details className="text-sm text-muted-foreground group inline">
+                      <summary className="cursor-pointer rounded-full px-3 py-1.5 glass glass-hover text-xs text-muted-foreground transition-colors inline-flex items-center gap-1.5 list-none [&::-webkit-details-marker]:hidden">
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className="transition-transform group-open:rotate-90"
+                        >
+                          <path d="M4.5 2.5l4 3.5-4 3.5" />
+                        </svg>
+                        Prompt &amp; Lyrics
+                      </summary>
+                      <div className="mt-3 glass-subtle rounded-xl p-4 space-y-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Prompt</div>
+                          <p className="text-sm text-muted-foreground text-pretty mt-1">
+                            {track.caption}
+                          </p>
+                        </div>
+                        {track.lyrics && (
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Lyrics</div>
+                            <pre className="whitespace-pre-wrap text-xs text-muted-foreground font-mono mt-1">
+                              {track.lyrics}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </details>
                   </div>
-
-                  <details className="text-sm text-muted-foreground group">
-                    <summary className="cursor-pointer flex items-center gap-1.5">
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        className="transition-transform group-open:rotate-90"
-                      >
-                        <path d="M4.5 2.5l4 3.5-4 3.5" />
-                      </svg>
-                      Prompt &amp; Lyrics
-                    </summary>
-                    <div className="mt-3 glass-subtle rounded-xl p-4 space-y-3">
-                      <div>
-                        <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Prompt</div>
-                        <p className="text-sm text-muted-foreground text-pretty mt-1">
-                          {track.caption}
-                        </p>
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Lyrics</div>
-                        <pre className="whitespace-pre-wrap text-xs text-muted-foreground font-mono mt-1">
-                          {track.lyrics}
-                        </pre>
-                      </div>
-                    </div>
-                  </details>
                 </div>
               ))}
             </div>
@@ -222,7 +219,7 @@ export default function LibraryPage() {
               </span>
             </div>
             <div className="flex items-center gap-8 font-medium text-sm text-muted-foreground">
-              <Link href="/create" className="hover:text-accent transition-colors">Create</Link>
+              <Link href="/" className="hover:text-accent transition-colors">Create</Link>
               <a href="https://github.com/ace-step/ACE-Step-1.5" target="_blank" rel="noopener noreferrer" className="text-xl hover:text-foreground transition-colors" aria-label="GitHub">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
               </a>
