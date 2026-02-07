@@ -8,6 +8,7 @@ import { saveTrack, makeTitle } from "@/lib/library";
 import { GenrePills } from "@/components/genre-pills";
 import { AudioPlayer } from "@/components/audio-player";
 import { GeneratingState } from "@/components/generating-state";
+import { AudioUpload } from "@/components/audio-upload";
 import { Logo } from "@/components/logo";
 
 const WRITING_MESSAGES = [
@@ -77,6 +78,8 @@ type AppState =
 
 type Mode = "smart" | "pro";
 
+type TaskType = "text2music" | "cover" | "repaint" | "complete" | "extract";
+
 type LyricsDensity = "light" | "moderate" | "heavy";
 
 type ContrastLevel = "subtle" | "balanced" | "bold";
@@ -91,15 +94,40 @@ type TrackDraft = {
   timesignature?: string;
   vocal_language?: string;
   seed?: string;
-  // Advanced generation params
+  // Task type
+  task_type?: TaskType;
+  src_audio_path?: string;
+  reference_audio_path?: string;
+  // Generation params
   inference_steps?: number;
   thinking?: boolean;
   infer_method?: string;
+  shift?: number;
+  guidance_scale?: number;
+  audio_format?: string;
+  // Repaint
+  repainting_start?: number;
+  repainting_end?: number;
+  // Cover
+  audio_cover_strength?: number;
+  // CoT
+  use_cot_metas?: boolean;
+  use_cot_caption?: boolean;
+  use_cot_language?: boolean;
+  // LM params
   lm_temperature?: number;
   lm_cfg_scale?: number;
   lm_top_k?: number;
   lm_top_p?: number;
   lm_negative_prompt?: string;
+};
+
+type ExtractMetadata = {
+  bpm?: number;
+  key?: string;
+  timesignature?: string;
+  caption?: string;
+  language?: string;
 };
 
 type TrackJob = {
@@ -110,6 +138,7 @@ type TrackJob = {
   audioBlob: Blob | null;
   error: string | null;
   saved: boolean;
+  extractMetadata?: ExtractMetadata;
 };
 
 const VIBES = [
@@ -183,6 +212,24 @@ function CreatePageInner() {
   // Core state machine
   const [state, setState] = useState<AppState>("compose");
   const [mode, setMode] = useState<Mode>("smart");
+  const [taskType, setTaskType] = useState<TaskType>("text2music");
+
+  // Audio upload state
+  const [uploadedAudioPath, setUploadedAudioPath] = useState<string | null>(null);
+  const [uploadedAudioName, setUploadedAudioName] = useState("");
+
+  // New generation params
+  const [shift, setShift] = useState(3.0);
+  const [guidanceScale, setGuidanceScale] = useState(7.0);
+  const [audioFormat, setAudioFormat] = useState<"mp3" | "flac" | "wav">("mp3");
+  const [repaintStart, setRepaintStart] = useState(0);
+  const [repaintEnd, setRepaintEnd] = useState(-1);
+  const [coverStrength, setCoverStrength] = useState(1.0);
+  const [useCotMetas, setUseCotMetas] = useState(true);
+  const [useCotCaption, setUseCotCaption] = useState(true);
+
+  // Extract results
+  const [extractResult, setExtractResult] = useState<ExtractMetadata | null>(null);
 
   // Shared form state
   const [duration, setDuration] = useState(30);
@@ -268,7 +315,8 @@ function CreatePageInner() {
     lyricsValue: string,
     durationValue: number,
     instrumentalValue: boolean,
-    seedValue?: number
+    seedValue?: number,
+    overrides?: Partial<TrackDraft>
   ): TrackDraft => ({
     caption: captionValue,
     lyrics: lyricsValue,
@@ -282,11 +330,17 @@ function CreatePageInner() {
     inference_steps: inferenceSteps,
     thinking,
     infer_method: inferMethod,
+    shift,
+    guidance_scale: guidanceScale,
+    audio_format: audioFormat,
+    use_cot_metas: useCotMetas,
+    use_cot_caption: useCotCaption,
     lm_temperature: lmTemperature,
     lm_cfg_scale: lmCfgScale,
     lm_top_k: lmTopK,
     lm_top_p: lmTopP,
     lm_negative_prompt: lmNegativePrompt || undefined,
+    ...overrides,
   });
 
   const stopPolling = useCallback(() => {
@@ -328,6 +382,7 @@ function CreatePageInner() {
                 status: "complete",
                 position: 0,
                 error: null,
+                extractMetadata: update.extract_metadata || undefined,
               };
             }
 
@@ -359,6 +414,11 @@ function CreatePageInner() {
           await Promise.all(
             nextJobs.map(async (job, index) => {
               if (job.status !== "complete" || job.audioUrl || !job.id) return;
+              // Extract tasks don't produce audio
+              if (job.extractMetadata) {
+                setExtractResult(job.extractMetadata);
+                return;
+              }
               const audioRes = await fetch(`/api/audio?job_id=${job.id}`);
               if (audioRes.ok) {
                 const blob = await audioRes.blob();
@@ -540,9 +600,27 @@ function CreatePageInner() {
             timesignature: track.timesignature || null,
             vocal_language: track.vocal_language || null,
             seed: track.seed ? parseInt(track.seed, 10) : null,
+            // Task type and audio
+            task_type: track.task_type || "text2music",
+            src_audio_path: track.src_audio_path || null,
+            reference_audio_path: track.reference_audio_path || null,
+            // Generation params
             inference_steps: track.inference_steps ?? 8,
             thinking: track.thinking ?? true,
             infer_method: track.infer_method ?? "ode",
+            shift: track.shift ?? 3.0,
+            guidance_scale: track.guidance_scale ?? 7.0,
+            audio_format: track.audio_format ?? "mp3",
+            // Repaint
+            repainting_start: track.repainting_start ?? 0,
+            repainting_end: track.repainting_end ?? -1,
+            // Cover
+            audio_cover_strength: track.audio_cover_strength ?? 1.0,
+            // CoT
+            use_cot_metas: track.use_cot_metas ?? true,
+            use_cot_caption: track.use_cot_caption ?? true,
+            use_cot_language: track.use_cot_language ?? true,
+            // LM
             lm_temperature: track.lm_temperature ?? 0.85,
             lm_cfg_scale: track.lm_cfg_scale ?? 2.0,
             lm_top_k: track.lm_top_k ?? 0,
@@ -550,18 +628,10 @@ function CreatePageInner() {
             lm_negative_prompt: track.lm_negative_prompt || null,
           };
           console.group(`Track ${idx === 0 ? "A" : "B"} → /api/generate`);
+          console.log("Task:", payload.task_type);
           console.log("Caption:", payload.caption);
-          console.log("Lyrics:", payload.lyrics?.substring(0, 200) + (payload.lyrics && payload.lyrics.length > 200 ? "..." : ""));
           console.log("Duration:", payload.duration, "s");
-          console.log("Instrumental:", payload.instrumental);
-          console.log("BPM:", payload.bpm);
-          console.log("Key:", payload.keyscale);
-          console.log("Time sig:", payload.timesignature);
-          console.log("Inference steps:", payload.inference_steps);
-          console.log("Thinking:", payload.thinking);
-          console.log("Infer method:", payload.infer_method);
-          console.log("LM temp:", payload.lm_temperature, "CFG:", payload.lm_cfg_scale, "TopK:", payload.lm_top_k, "TopP:", payload.lm_top_p);
-          console.log("Language:", payload.vocal_language);
+          console.log("Format:", payload.audio_format);
           console.log("Seed:", payload.seed);
           console.groupEnd();
 
@@ -634,7 +704,7 @@ function CreatePageInner() {
   );
 
   useEffect(() => {
-    setLongerDuration(Math.min(duration + 30, 120));
+    setLongerDuration(Math.min(duration + 30, 600));
   }, [duration]);
 
   const handleSmartGenerate = async () => {
@@ -867,7 +937,7 @@ function CreatePageInner() {
   };
 
   const handleGenerateLonger = async () => {
-    const nextDuration = Math.min(Math.max(longerDuration, 10), 120);
+    const nextDuration = Math.min(Math.max(longerDuration, 10), 600);
     const updatedTracks = previewTracksRef.current.map((track) => ({
       ...track,
       duration: nextDuration,
@@ -898,9 +968,21 @@ function CreatePageInner() {
       keyscale: track.keyscale || null,
       timesignature: track.timesignature || null,
       vocal_language: track.vocal_language || null,
+      task_type: track.task_type || "text2music",
+      src_audio_path: track.src_audio_path || null,
+      reference_audio_path: track.reference_audio_path || null,
       inference_steps: track.inference_steps ?? 8,
       thinking: track.thinking ?? true,
       infer_method: track.infer_method ?? "ode",
+      shift: track.shift ?? 3.0,
+      guidance_scale: track.guidance_scale ?? 7.0,
+      audio_format: track.audio_format ?? "mp3",
+      repainting_start: track.repainting_start ?? 0,
+      repainting_end: track.repainting_end ?? -1,
+      audio_cover_strength: track.audio_cover_strength ?? 1.0,
+      use_cot_metas: track.use_cot_metas ?? true,
+      use_cot_caption: track.use_cot_caption ?? true,
+      use_cot_language: track.use_cot_language ?? true,
       lm_temperature: track.lm_temperature ?? 0.85,
       lm_cfg_scale: track.lm_cfg_scale ?? 2.0,
       lm_top_k: track.lm_top_k ?? 0,
@@ -908,11 +990,7 @@ function CreatePageInner() {
       lm_negative_prompt: track.lm_negative_prompt || null,
       seed: regenSeed ?? null,
     };
-    console.log("Caption:", payload.caption);
-    console.log("Lyrics:", payload.lyrics?.substring(0, 200));
-    console.log("Duration:", payload.duration, "s");
-    console.log("Seed:", currentSeed, "→", regenSeed);
-    console.log("Full payload:", payload);
+    console.log("Regenerate payload:", payload);
 
     try {
       const res = await fetch("/api/generate", {
@@ -1082,6 +1160,17 @@ function CreatePageInner() {
     setVocalLanguage("auto");
     setGenreSearch("");
     setShowMusicalControls(false);
+    setUploadedAudioPath(null);
+    setUploadedAudioName("");
+    setShift(3.0);
+    setGuidanceScale(7.0);
+    setAudioFormat("mp3");
+    setRepaintStart(0);
+    setRepaintEnd(-1);
+    setCoverStrength(1.0);
+    setUseCotMetas(true);
+    setUseCotCaption(true);
+    setExtractResult(null);
     setError(null);
     setState("compose");
   };
@@ -1105,8 +1194,73 @@ function CreatePageInner() {
     setState("compose");
   };
 
+  const handleAudioTaskGenerate = async () => {
+    setError(null);
+    if (!uploadedAudioPath) {
+      setError("Please upload an audio file first");
+      return;
+    }
+
+    const seedA = parseSeed(seed);
+    const baseCaption = caption.trim() || "music";
+
+    if (taskType === "extract") {
+      setExtractResult(null);
+      const draft: TrackDraft = makeDraft(baseCaption, "[Instrumental]", duration, true, seedA, {
+        task_type: "extract",
+        src_audio_path: uploadedAudioPath,
+      });
+      setPreviewTracks([draft]);
+      setTrackJobs([
+        { id: null, status: "idle", position: 0, audioUrl: null, audioBlob: null, error: null, saved: false },
+      ]);
+      await submitTracks([draft]);
+      return;
+    }
+
+    const overrides: Partial<TrackDraft> = {
+      task_type: taskType,
+      src_audio_path: uploadedAudioPath,
+    };
+
+    if (taskType === "cover") {
+      overrides.audio_cover_strength = coverStrength;
+    }
+    if (taskType === "repaint") {
+      overrides.repainting_start = repaintStart;
+      overrides.repainting_end = repaintEnd;
+    }
+
+    const draft: TrackDraft = makeDraft(
+      buildCaptionWithTags(baseCaption),
+      lyrics.trim() || "[Instrumental]",
+      duration,
+      isInstrumental || !lyrics.trim(),
+      seedA,
+      overrides,
+    );
+    setPreviewTracks([draft]);
+    setTrackJobs([
+      { id: null, status: "idle", position: 0, audioUrl: null, audioBlob: null, error: null, saved: false },
+    ]);
+    await submitTracks([draft]);
+  };
+
+  const handleCopyExtractToCreate = () => {
+    if (!extractResult) return;
+    setTaskType("text2music");
+    setCaption(extractResult.caption || "");
+    setBpm(extractResult.bpm ? String(extractResult.bpm) : "");
+    setMusicalKey(extractResult.key || "");
+    setTimeSignature(extractResult.timesignature || "");
+    setMode("pro");
+    setState("compose");
+    setExtractResult(null);
+  };
+
   const canSmartGenerate = smartPrompt.trim().length > 0;
   const canProGenerate = caption.trim().length > 0;
+  const canAudioTaskGenerate = !!uploadedAudioPath && (taskType === "extract" || caption.trim().length > 0);
 
   const anyQueued = trackJobs.some((job) => job.status === "queued");
   const anyGenerating = trackJobs.some((job) => job.status === "generating");
@@ -1151,24 +1305,100 @@ function CreatePageInner() {
           <div className="text-center space-y-2">
             <h1 className="text-[1.875rem] font-display tracking-tight text-balance leading-[1.2]">
               {state === "player"
-                ? "Your two tracks are ready"
+                ? extractResult ? "Analysis complete" : previewTracks.length === 1 ? "Your track is ready" : "Your two tracks are ready"
                 : state === "preview-lyrics"
                 ? "Review your tracks"
+                : taskType === "text2music"
+                ? "Describe the music in your head"
+                : taskType === "cover"
+                ? "Transform a song's style"
+                : taskType === "repaint"
+                ? "Edit a section of your track"
+                : taskType === "complete"
+                ? "Extend your track"
+                : taskType === "extract"
+                ? "Analyze a track"
                 : "Describe the music in your head"}
             </h1>
             <p className="text-[15px] text-muted-foreground text-pretty">
               {state === "player"
-                ? "Compare, download, or generate again"
+                ? extractResult ? "View the extracted metadata below" : previewTracks.length === 1 ? "Listen, download, or generate again" : "Compare, download, or generate again"
                 : state === "preview-lyrics"
                 ? "Edit anything, then generate both versions"
-                : "Smart for speed, Pro for total control. We generate two distinct takes every time."}
+                : taskType === "text2music"
+                ? "Smart for speed, Pro for total control. We generate two distinct takes every time."
+                : taskType === "cover"
+                ? "Upload a track and describe the new style you want"
+                : taskType === "repaint"
+                ? "Upload a track and select a section to regenerate"
+                : taskType === "complete"
+                ? "Upload a track and we'll continue it"
+                : taskType === "extract"
+                ? "Upload a track to extract its metadata — BPM, key, and more"
+                : ""}
             </p>
           </div>
 
           {/* ─── Player State ─── */}
           {state === "player" ? (
             <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              {/* Extract metadata result */}
+              {extractResult ? (
+                <div className="glass-elevated rounded-3xl p-7 space-y-5">
+                  <div className="text-xs font-bold text-accent uppercase tracking-widest">Extracted Metadata</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {extractResult.bpm && (
+                      <div className="glass-subtle rounded-xl p-4 space-y-1">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide">BPM</div>
+                        <div className="text-lg font-semibold font-display">{extractResult.bpm}</div>
+                      </div>
+                    )}
+                    {extractResult.key && (
+                      <div className="glass-subtle rounded-xl p-4 space-y-1">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Key</div>
+                        <div className="text-lg font-semibold font-display">{extractResult.key}</div>
+                      </div>
+                    )}
+                    {extractResult.timesignature && (
+                      <div className="glass-subtle rounded-xl p-4 space-y-1">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Time Signature</div>
+                        <div className="text-lg font-semibold font-display">
+                          {extractResult.timesignature === "4" ? "4/4" : extractResult.timesignature === "3" ? "3/4" : extractResult.timesignature === "6" ? "6/8" : extractResult.timesignature}
+                        </div>
+                      </div>
+                    )}
+                    {extractResult.language && (
+                      <div className="glass-subtle rounded-xl p-4 space-y-1">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Language</div>
+                        <div className="text-lg font-semibold font-display">{extractResult.language}</div>
+                      </div>
+                    )}
+                  </div>
+                  {extractResult.caption && (
+                    <div className="glass-subtle rounded-xl p-4 space-y-1">
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Caption</div>
+                      <div className="text-sm text-foreground">{extractResult.caption}</div>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCopyExtractToCreate}
+                      className="flex-1 rounded-xl px-4 py-3 btn-primary text-white font-semibold text-sm"
+                    >
+                      Use in Create tab
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="flex-1 rounded-xl px-4 py-3 glass glass-hover text-muted-foreground font-medium text-sm"
+                    >
+                      Start fresh
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <div className={cn("grid gap-6", trackJobs.length > 1 ? "md:grid-cols-2" : "max-w-lg mx-auto")}>
                 {trackJobs.map((job, index) => (
                   <div key={index} className={`glass-elevated rounded-3xl p-7 space-y-4 border-t-2 ${index === 0 ? "border-t-accent" : "border-t-violet-400"}`}>
                     <div className="flex items-center justify-between">
@@ -1211,6 +1441,7 @@ function CreatePageInner() {
                   </div>
                 ))}
               </div>
+              )}
               <div className="space-y-3">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Next steps</div>
                 <div className="grid gap-3 md:grid-cols-3">
@@ -1224,7 +1455,7 @@ function CreatePageInner() {
                     <input
                       type="range"
                       min={10}
-                      max={120}
+                      max={600}
                       step={5}
                       value={longerDuration}
                       onChange={(e) => setLongerDuration(parseInt(e.target.value, 10))}
@@ -1411,6 +1642,279 @@ function CreatePageInner() {
 
           ) : (
             <div className="space-y-5">
+              {/* Task type tabs */}
+              <div className="flex flex-wrap gap-2 justify-center">
+                {([
+                  ["text2music", "Create"],
+                  ["cover", "Cover"],
+                  ["repaint", "Repaint"],
+                  ["complete", "Extend"],
+                  ["extract", "Extract"],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setTaskType(value)}
+                    className={cn(
+                      "glass-chip px-4 py-1.5 text-sm",
+                      taskType === value && "selected"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ─── Audio Task Forms (Cover, Repaint, Extend, Extract) ─── */}
+              {taskType !== "text2music" ? (
+                <div className="glass-elevated rounded-3xl p-7 space-y-6">
+                  {/* Audio upload */}
+                  <AudioUpload
+                    label="Source track"
+                    description={
+                      taskType === "extract"
+                        ? "Upload the track you want to analyze"
+                        : taskType === "cover"
+                        ? "Upload the track you want to transform"
+                        : taskType === "repaint"
+                        ? "Upload the track to edit a section of"
+                        : "Upload the track you want to extend"
+                    }
+                    onUpload={(path, name) => {
+                      setUploadedAudioPath(path);
+                      setUploadedAudioName(name);
+                    }}
+                    onRemove={() => {
+                      setUploadedAudioPath(null);
+                      setUploadedAudioName("");
+                    }}
+                    uploadedFileName={uploadedAudioName}
+                  />
+
+                  {/* Caption (not for extract) */}
+                  {taskType !== "extract" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {taskType === "cover" ? "Describe the new style" : taskType === "repaint" ? "Describe the edited section" : "Describe the extension"}
+                      </label>
+                      <textarea
+                        value={caption}
+                        onChange={(e) => setCaption(e.target.value)}
+                        placeholder={
+                          taskType === "cover"
+                            ? "e.g. Transform into a jazzy lo-fi version with warm piano..."
+                            : taskType === "repaint"
+                            ? "e.g. Replace this section with an energetic guitar solo..."
+                            : "e.g. Continue with a triumphant orchestral crescendo..."
+                        }
+                        rows={3}
+                        maxLength={512}
+                        className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {/* Cover: strength slider */}
+                  {taskType === "cover" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Cover strength
+                        </label>
+                        <span className="text-sm font-mono text-foreground tabular-nums">{coverStrength.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={coverStrength}
+                        onChange={(e) => setCoverStrength(parseFloat(e.target.value))}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                        <span>More creative</span>
+                        <span>More faithful</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Repaint: time range */}
+                  {taskType === "repaint" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Time range (seconds)
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Start</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={repaintStart}
+                            onChange={(e) => setRepaintStart(Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">End (-1 = end of file)</label>
+                          <input
+                            type="number"
+                            min={-1}
+                            value={repaintEnd}
+                            onChange={(e) => setRepaintEnd(parseFloat(e.target.value) || -1)}
+                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Duration (not for extract) */}
+                  {taskType !== "extract" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {taskType === "complete" ? "Target duration" : "Duration"}
+                        </label>
+                        <span className="text-sm font-mono text-foreground tabular-nums">{duration}s</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={10}
+                        max={600}
+                        step={5}
+                        value={duration}
+                        onChange={(e) => setDuration(parseInt(e.target.value, 10))}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                        <span>10s</span>
+                        <span>600s</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audio format (not for extract) */}
+                  {taskType !== "extract" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Audio format
+                      </label>
+                      <div className="glass-pill flex">
+                        {(["mp3", "flac", "wav"] as const).map((fmt) => (
+                          <button
+                            key={fmt}
+                            type="button"
+                            onClick={() => setAudioFormat(fmt)}
+                            className={cn(
+                              "glass-pill-segment flex-1 text-center uppercase",
+                              audioFormat === fmt && "active"
+                            )}
+                          >
+                            {fmt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generation settings (collapsible, not for extract) */}
+                  {taskType !== "extract" && (
+                    <details className="group">
+                      <summary className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                        <svg
+                          width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"
+                          className="transition-transform group-open:rotate-90"
+                        >
+                          <path d="M4.5 2.5l4 3.5-4 3.5" />
+                        </svg>
+                        <span className="uppercase tracking-wide">Generation Settings</span>
+                      </summary>
+                      <div className="glass-subtle rounded-xl p-4 mt-3 space-y-4">
+                        {/* Quality steps */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Quality steps</label>
+                            <span className="text-xs text-muted-foreground/70">{inferenceSteps}</span>
+                          </div>
+                          <input type="range" min={1} max={20} step={1} value={inferenceSteps}
+                            onChange={(e) => setInferenceSteps(parseInt(e.target.value, 10))} className="w-full accent-foreground/60" />
+                        </div>
+                        {/* Shift */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Shift</label>
+                            <span className="text-xs text-muted-foreground/70">{shift.toFixed(1)}</span>
+                          </div>
+                          <input type="range" min={1} max={5} step={0.1} value={shift}
+                            onChange={(e) => setShift(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                        </div>
+                        {/* Guidance scale */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Guidance scale</label>
+                            <span className="text-xs text-muted-foreground/70">{guidanceScale.toFixed(1)}</span>
+                          </div>
+                          <input type="range" min={1} max={15} step={0.5} value={guidanceScale}
+                            onChange={(e) => setGuidanceScale(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                        </div>
+                        {/* Seed */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Seed (empty = random)</label>
+                          <input type="number" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="Random"
+                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
+                        </div>
+                        {/* Thinking */}
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs text-muted-foreground flex-1">Thinking (CoT)</label>
+                          <button type="button" onClick={() => setThinking(!thinking)}
+                            className={cn("w-10 h-5 rounded-full transition-colors relative", thinking ? "bg-foreground/80" : "bg-foreground/20")}>
+                            <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", thinking ? "left-5" : "left-0.5")} />
+                          </button>
+                        </div>
+                        {/* Creativity */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Creativity</label>
+                            <span className="text-xs text-muted-foreground/70">{lmTemperature.toFixed(2)}</span>
+                          </div>
+                          <input type="range" min={0} max={2} step={0.05} value={lmTemperature}
+                            onChange={(e) => setLmTemperature(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                        </div>
+                        {/* Prompt adherence */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Prompt adherence</label>
+                            <span className="text-xs text-muted-foreground/70">{lmCfgScale.toFixed(1)}</span>
+                          </div>
+                          <input type="range" min={1} max={3} step={0.1} value={lmCfgScale}
+                            onChange={(e) => setLmCfgScale(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                        </div>
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Error */}
+                  {error && (
+                    <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2.5">{error}</p>
+                  )}
+
+                  {/* Generate button */}
+                  <button
+                    onClick={handleAudioTaskGenerate}
+                    disabled={!canAudioTaskGenerate}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 btn-primary text-white font-semibold text-base"
+                  >
+                    {taskType === "extract" ? "Extract Metadata" :
+                     taskType === "cover" ? "Generate Cover" :
+                     taskType === "repaint" ? "Repaint Section" :
+                     "Extend Track"}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" /></svg>
+                  </button>
+                </div>
+              ) : (
+              <>
               {/* Mode toggle */}
               <div className="glass-pill flex">
                 <button
@@ -1556,7 +2060,7 @@ function CreatePageInner() {
                     <input
                       type="range"
                       min={10}
-                      max={120}
+                      max={600}
                       step={5}
                       value={duration}
                       onChange={(e) => setDuration(parseInt(e.target.value, 10))}
@@ -1565,7 +2069,7 @@ function CreatePageInner() {
                     />
                     <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
                       <span>10s</span>
-                      <span>120s</span>
+                      <span>600s</span>
                     </div>
                   </div>
 
@@ -1673,6 +2177,28 @@ function CreatePageInner() {
                           />
                           Auto-save to Library
                         </label>
+                      </div>
+
+                      {/* Audio format */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Audio format
+                        </label>
+                        <div className="glass-pill flex">
+                          {(["mp3", "flac", "wav"] as const).map((fmt) => (
+                            <button
+                              key={fmt}
+                              type="button"
+                              onClick={() => setAudioFormat(fmt)}
+                              className={cn(
+                                "glass-pill-segment flex-1 text-center uppercase",
+                                audioFormat === fmt && "active"
+                              )}
+                            >
+                              {fmt}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </details>
@@ -1909,6 +2435,28 @@ function CreatePageInner() {
                       </label>
                     </div>
 
+                    {/* Audio format */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Audio format
+                      </label>
+                      <div className="glass-pill flex">
+                        {(["mp3", "flac", "wav"] as const).map((fmt) => (
+                          <button
+                            key={fmt}
+                            type="button"
+                            onClick={() => setAudioFormat(fmt)}
+                            className={cn(
+                              "glass-pill-segment flex-1 text-center uppercase",
+                              audioFormat === fmt && "active"
+                            )}
+                          >
+                            {fmt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Duration slider */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -1922,7 +2470,7 @@ function CreatePageInner() {
                       <input
                         type="range"
                         min={10}
-                        max={120}
+                        max={600}
                         step={5}
                         value={duration}
                         onChange={(e) => setDuration(parseInt(e.target.value, 10))}
@@ -1931,7 +2479,7 @@ function CreatePageInner() {
                       />
                       <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
                         <span>10s</span>
-                        <span>120s</span>
+                        <span>600s</span>
                       </div>
                     </div>
 
@@ -2133,6 +2681,42 @@ function CreatePageInner() {
                             </div>
                           </div>
 
+                          {/* Shift */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">Shift</label>
+                              <span className="text-xs text-muted-foreground/70">{shift.toFixed(1)}</span>
+                            </div>
+                            <input type="range" min={1} max={5} step={0.1} value={shift}
+                              onChange={(e) => setShift(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                          </div>
+
+                          {/* Guidance scale */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">Guidance scale</label>
+                              <span className="text-xs text-muted-foreground/70">{guidanceScale.toFixed(1)}</span>
+                            </div>
+                            <input type="range" min={1} max={15} step={0.5} value={guidanceScale}
+                              onChange={(e) => setGuidanceScale(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
+                          </div>
+
+                          {/* CoT controls */}
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs text-muted-foreground flex-1">Auto-detect metadata (CoT)</label>
+                            <button type="button" onClick={() => setUseCotMetas(!useCotMetas)}
+                              className={cn("w-10 h-5 rounded-full transition-colors relative", useCotMetas ? "bg-foreground/80" : "bg-foreground/20")}>
+                              <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", useCotMetas ? "left-5" : "left-0.5")} />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs text-muted-foreground flex-1">Enhance caption (CoT)</label>
+                            <button type="button" onClick={() => setUseCotCaption(!useCotCaption)}
+                              className={cn("w-10 h-5 rounded-full transition-colors relative", useCotCaption ? "bg-foreground/80" : "bg-foreground/20")}>
+                              <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", useCotCaption ? "left-5" : "left-0.5")} />
+                            </button>
+                          </div>
+
                           {/* Creativity */}
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
@@ -2248,6 +2832,8 @@ function CreatePageInner() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" /></svg>
                   </button>
                 </div>
+              )}
+              </>
               )}
             </div>
           )}
