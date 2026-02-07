@@ -54,10 +54,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} ${landingBody.variable} antialiased`}
-      >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} ${landingBody.variable}`}>
+      <body className="antialiased">
         <div className="gradient-mesh" />
         <div className="noise-overlay" aria-hidden="true" />
         <div className="relative z-10">{children}</div>
