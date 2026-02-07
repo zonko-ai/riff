@@ -156,9 +156,9 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
               {Array.from({ length: 24 }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-1.5 rounded-full bg-accent/20"
+                  className="w-1.5 rounded-full bg-accent/15"
                   style={{
-                    height: `${20 + Math.sin(i * 0.5) * 40 + ((i * 7 + 3) % 20)}%`,
+                    height: `${20 + Math.sin(i * 0.5) * 35 + ((i * 7 + 3) % 18)}%`,
                   }}
                 />
               ))}
@@ -213,7 +213,7 @@ export function AudioPlayer({ src, onReset }: AudioPlayerProps) {
       <div className="flex gap-3">
         <button
           onClick={handleDownload}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 btn-primary text-white font-medium text-sm"
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 glass glass-hover text-muted-foreground font-medium text-sm hover:text-foreground"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M8 2v9m0 0L4.5 7.5M8 11l3.5-3.5M2 13h12" />

@@ -10,6 +10,55 @@ import { AudioPlayer } from "@/components/audio-player";
 import { GeneratingState } from "@/components/generating-state";
 import { Logo } from "@/components/logo";
 
+const WRITING_MESSAGES = [
+  "Crafting verses...",
+  "Finding the right words...",
+  "Building the chorus...",
+  "Shaping the melody...",
+  "Polishing the lyrics...",
+];
+
+function WritingLyricsState() {
+  const [msgIndex, setMsgIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setMsgIndex((i) => (i + 1) % WRITING_MESSAGES.length), 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="glass-elevated rounded-3xl p-8 flex flex-col items-center gap-4">
+      <div className="flex items-center gap-2">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="text-accent"
+        >
+          <path d="M10 2L12.5 7.5L18 10L12.5 12.5L10 18L7.5 12.5L2 10L7.5 7.5L10 2Z" />
+        </svg>
+        <span className="text-sm text-muted-foreground">
+          Writing lyrics with AI...
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground/60">{WRITING_MESSAGES[msgIndex]}</p>
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="size-1.5 rounded-full bg-accent"
+            style={{
+              animation: `pulse-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CreatePage() {
   return (
     <Suspense>
@@ -1065,24 +1114,21 @@ function CreatePageInner() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-black/[0.04] px-6 py-6 sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <header className="px-6 py-5">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_4px_12px_rgba(249,115,22,0.25)]">
+            <div className="size-11 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_2px_8px_rgba(249,115,22,0.25)]">
               <Logo showText={false} className="text-white" />
             </div>
-            <span className="text-xl font-bold font-display tracking-tight">Riff</span>
+            <div>
+              <div className="text-lg font-semibold font-display">Riff</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">OPEN-SOURCE MUSIC GENERATOR</div>
+            </div>
           </Link>
-          <div className="flex items-center gap-8 text-sm">
-            <Link
-              href="/"
-              className="font-medium text-muted-foreground hover:text-accent transition-colors"
-            >
-              Home
-            </Link>
+          <div className="flex items-center gap-6 text-sm">
             <Link
               href="/library"
-              className="font-medium text-muted-foreground hover:text-accent transition-colors"
+              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Library
             </Link>
@@ -1090,9 +1136,9 @@ function CreatePageInner() {
               href="https://github.com/ace-step/ACE-Step-1.5"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-muted-foreground hover:text-accent transition-colors"
+              className="font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Powered by ACE-Step
+              GitHub
             </a>
           </div>
         </div>
@@ -1124,13 +1170,18 @@ function CreatePageInner() {
             <div className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 {trackJobs.map((job, index) => (
-                  <div key={index} className="glass-elevated rounded-3xl p-7 space-y-4">
+                  <div key={index} className={`glass-elevated rounded-3xl p-7 space-y-4 border-t-2 ${index === 0 ? "border-t-accent" : "border-t-violet-400"}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Track {index === 0 ? "A" : "B"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`size-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${index === 0 ? "bg-accent" : "bg-violet-400"}`}>
+                          {index === 0 ? "A" : "B"}
+                        </span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Track {index === 0 ? "A" : "B"}
+                        </span>
+                      </div>
                       <span className="text-xs text-muted-foreground">
-                        {index === 0 ? "Primary" : "Alternate"}
+                        {index === 0 ? "Primary take" : "Alternate take"}
                       </span>
                     </div>
                     {job.audioUrl ? (
@@ -1160,12 +1211,13 @@ function CreatePageInner() {
                   </div>
                 ))}
               </div>
-              <div className="glass-elevated rounded-3xl p-7 space-y-4">
-                <div className="text-sm font-medium">Iterate</div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Generate longer version</div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Next steps</div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="glass-subtle rounded-xl p-4 space-y-3">
+                    <div className="text-sm font-semibold">Extend duration</div>
+                    <p className="text-xs text-muted-foreground">Generate a longer version of these tracks.</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Duration</span>
                       <span className="font-mono tabular-nums">{longerDuration}s</span>
                     </div>
@@ -1182,29 +1234,31 @@ function CreatePageInner() {
                     <button
                       type="button"
                       onClick={handleGenerateLonger}
-                      className="w-full rounded-xl px-4 py-2 btn-primary text-white text-sm font-semibold"
+                      className="w-full rounded-xl px-3 py-2 btn-primary text-white text-sm font-semibold"
                     >
-                      Generate longer version
+                      Extend
                     </button>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Edit &amp; refine</div>
-                    <p className="text-sm text-muted-foreground text-pretty">
-                      Tweak prompts or lyrics before regenerating both tracks.
-                    </p>
+                  <div className="glass-subtle rounded-xl p-4 space-y-3">
+                    <div className="text-sm font-semibold">Edit prompts</div>
+                    <p className="text-xs text-muted-foreground">Tweak prompts or lyrics before regenerating both tracks.</p>
                     <button
                       type="button"
                       onClick={() => setState("preview-lyrics")}
-                      className="w-full rounded-xl px-4 py-2 glass glass-hover text-muted-foreground text-sm font-semibold"
+                      className="w-full rounded-xl px-3 py-2 glass glass-hover text-muted-foreground text-sm font-semibold"
                     >
-                      Edit prompts &amp; lyrics
+                      Edit &amp; regenerate
                     </button>
+                  </div>
+                  <div className="glass-subtle rounded-xl p-4 space-y-3">
+                    <div className="text-sm font-semibold">Start fresh</div>
+                    <p className="text-xs text-muted-foreground">Clear everything and start with a new idea from scratch.</p>
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="w-full rounded-xl px-4 py-2 glass glass-hover text-muted-foreground text-sm font-semibold"
+                      className="w-full rounded-xl px-3 py-2 glass glass-hover text-muted-foreground text-sm font-semibold"
                     >
-                      Start new idea
+                      New idea
                     </button>
                   </div>
                 </div>
@@ -1222,7 +1276,14 @@ function CreatePageInner() {
                       key={index}
                       className="flex items-center justify-between text-sm text-muted-foreground"
                     >
-                      <span>Track {index === 0 ? "A" : "B"}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`size-2 rounded-full ${
+                          job.status === "generating" ? "bg-accent animate-pulse" :
+                          job.status === "complete" ? "bg-emerald-500" :
+                          "bg-muted-foreground/30"
+                        }`} />
+                        <span>Track {index === 0 ? "A" : "B"}</span>
+                      </div>
                       <span>
                         {job.status === "queued"
                           ? `Queued #${job.position || "?"}`
@@ -1245,47 +1306,25 @@ function CreatePageInner() {
             </div>
 
           ) : state === "writing-lyrics" ? (
-            <div className="glass-elevated rounded-3xl p-8 flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="text-accent"
-                >
-                  <path d="M10 2L12.5 7.5L18 10L12.5 12.5L10 18L7.5 12.5L2 10L7.5 7.5L10 2Z" />
-                </svg>
-                <span className="text-sm text-muted-foreground">
-                  Writing lyrics with AI...
-                </span>
-              </div>
-              <div className="flex gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="size-1.5 rounded-full bg-accent"
-                    style={{
-                      animation: `pulse-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            <WritingLyricsState />
+
 
           ) : state === "preview-lyrics" ? (
             <div className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 {previewTracks.map((track, index) => (
-                  <div key={index} className="glass-elevated rounded-3xl p-7 space-y-5">
+                  <div key={index} className={`glass-elevated rounded-3xl p-7 space-y-5 border-t-2 ${index === 0 ? "border-t-accent" : "border-t-violet-400"}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Track {index === 0 ? "A" : "B"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`size-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${index === 0 ? "bg-accent" : "bg-violet-400"}`}>
+                          {index === 0 ? "A" : "B"}
+                        </span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Track {index === 0 ? "A" : "B"}
+                        </span>
+                      </div>
                       <span className="text-xs text-muted-foreground">
-                        {index === 0 ? "Primary" : "Alternate"}
+                        {index === 0 ? "Primary take" : "Alternate take"}
                       </span>
                     </div>
 
@@ -1325,13 +1364,18 @@ function CreatePageInner() {
                           maxLength={4096}
                           className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 font-mono resize-none focus:outline-none"
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleRewriteChorus(index)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Rewrite chorus
-                        </button>
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => handleRewriteChorus(index)}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Rewrite chorus
+                          </button>
+                          <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums">
+                            {track.lyrics.length} / 4096
+                          </span>
+                        </div>
                       </div>
                     )}
 
@@ -1499,70 +1543,6 @@ function CreatePageInner() {
                     </div>
                   )}
 
-                  {/* Lyrics density (vocal only) */}
-                  {!isInstrumental && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Lyrics density
-                      </label>
-                      <div className="glass-pill flex">
-                        {(["light", "moderate", "heavy"] as const).map((d) => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setLyricsDensity(d)}
-                            className={cn(
-                              "glass-pill-segment flex-1 text-center capitalize",
-                              lyricsDensity === d && "active"
-                            )}
-                          >
-                            {d}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Variants */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Two-track variation
-                    </label>
-                    <div className="glass-pill flex">
-                      {(["subtle", "balanced", "bold"] as const).map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setContrastLevel(level)}
-                          className={cn(
-                            "glass-pill-segment flex-1 text-center capitalize",
-                            contrastLevel === level && "active"
-                          )}
-                        >
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                    {!isInstrumental && (
-                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={altLyrics}
-                          onChange={(e) => setAltLyrics(e.target.checked)}
-                        />
-                        Generate alternate lyrics for Track B
-                      </label>
-                    )}
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={autoSave}
-                        onChange={(e) => setAutoSave(e.target.checked)}
-                      />
-                      Auto-save to Library
-                    </label>
-                  </div>
-
                   {/* Duration slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -1605,547 +1585,649 @@ function CreatePageInner() {
                     {isInstrumental ? "Generate Two Tracks" : "Write Lyrics & Preview"}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" /></svg>
                   </button>
+
+                  {/* Collapsible options */}
+                  <details className="group">
+                    <summary className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        className="transition-transform group-open:rotate-90"
+                      >
+                        <path d="M4.5 2.5l4 3.5-4 3.5" />
+                      </svg>
+                      <span className="uppercase tracking-wide">Options</span>
+                    </summary>
+                    <div className="glass-subtle rounded-xl p-4 mt-3 space-y-5">
+                      {/* Lyrics density (vocal only) */}
+                      {!isInstrumental && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            How many lyrics?
+                          </label>
+                          <div className="glass-pill flex">
+                            {([
+                              ["light", "Sparse"],
+                              ["moderate", "Standard"],
+                              ["heavy", "Dense"],
+                            ] as const).map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setLyricsDensity(value)}
+                                className={cn(
+                                  "glass-pill-segment flex-1 text-center",
+                                  lyricsDensity === value && "active"
+                                )}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Two-track variation */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          How different should Track B be?
+                        </label>
+                        <div className="glass-pill flex">
+                          {([
+                            ["subtle", "Similar"],
+                            ["balanced", "Different"],
+                            ["bold", "Very different"],
+                          ] as const).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setContrastLevel(value)}
+                              className={cn(
+                                "glass-pill-segment flex-1 text-center",
+                                contrastLevel === value && "active"
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        {!isInstrumental && (
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={altLyrics}
+                              onChange={(e) => setAltLyrics(e.target.checked)}
+                            />
+                            Write unique lyrics for Track B
+                          </label>
+                        )}
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={autoSave}
+                            onChange={(e) => setAutoSave(e.target.checked)}
+                          />
+                          Auto-save to Library
+                        </label>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
               ) : (
-                <div className="glass-elevated rounded-3xl p-7 space-y-6">
-                  {/* Genre quick picks */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Genre
-                    </label>
-                    <input
-                      type="text"
-                      value={genreSearch}
-                      onChange={(e) => setGenreSearch(e.target.value)}
-                      placeholder="Search genres..."
-                      className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                    />
-                    <GenrePills
-                      selected={selectedGenre}
-                      onSelect={handleGenreSelect}
-                      filter={genreSearch}
-                    />
-                  </div>
+                <div className="space-y-5">
+                  {/* ── Section 1: What to create ── */}
+                  <div className="glass-elevated rounded-3xl p-7 space-y-6">
+                    <div className="text-xs font-bold text-accent uppercase tracking-widest">What to create</div>
 
-                  {/* Music description */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="caption"
-                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-                    >
-                      Music description
-                    </label>
-                    <textarea
-                      id="caption"
-                      value={caption}
-                      onChange={(e) => {
-                        setCaption(e.target.value);
-                        setSelectedGenre(null);
-                      }}
-                      placeholder="e.g. A melancholic piano ballad with soft strings and rain sounds..."
-                      rows={3}
-                      maxLength={512}
-                      className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Style tags */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Style tags</label>
+                    {/* Genre quick picks */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Genre
+                      </label>
                       <input
                         type="text"
-                        value={styleTags}
-                        onChange={(e) => setStyleTags(e.target.value)}
-                        placeholder="lofi, warm vinyl, soft piano"
+                        value={genreSearch}
+                        onChange={(e) => setGenreSearch(e.target.value)}
+                        placeholder="Search genres..."
                         className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Avoid</label>
-                      <input
-                        type="text"
-                        value={negativeTags}
-                        onChange={(e) => setNegativeTags(e.target.value)}
-                        placeholder="no heavy drums, no distortion"
-                        className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                      <GenrePills
+                        selected={selectedGenre}
+                        onSelect={handleGenreSelect}
+                        filter={genreSearch}
                       />
                     </div>
-                  </div>
 
-                  {/* Musical controls (collapsible) */}
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowMusicalControls(!showMusicalControls)}
-                      className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        className={cn(
-                          "transition-transform",
-                          showMusicalControls && "rotate-90"
-                        )}
-                      >
-                        <path d="M4.5 2.5l4 3.5-4 3.5" />
-                      </svg>
-                      <span className="uppercase">Musical Controls</span>
-                    </button>
-
-                    {showMusicalControls && (
-                      <div className="glass-subtle rounded-xl p-4 space-y-4">
-                        {/* BPM */}
-                        <div className="space-y-1">
-                          <label htmlFor="bpm" className="text-xs text-muted-foreground">
-                            BPM (leave empty for auto)
-                          </label>
-                          <input
-                            id="bpm"
-                            type="number"
-                            min={40}
-                            max={240}
-                            value={bpm}
-                            onChange={(e) => setBpm(e.target.value)}
-                            placeholder="Auto"
-                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                          />
-                        </div>
-
-                        {/* Key */}
-                        <div className="space-y-1">
-                          <label htmlFor="musical-key" className="text-xs text-muted-foreground">
-                            Key (leave empty for auto)
-                          </label>
-                          <select
-                            id="musical-key"
-                            value={musicalKey}
-                            onChange={(e) => setMusicalKey(e.target.value)}
-                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
-                          >
-                            <option value="" className="bg-white">
-                              Auto
-                            </option>
-                            {MUSICAL_KEYS.map((k) => (
-                              <option key={k} value={k} className="bg-white">
-                                {k}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Time Signature */}
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">
-                            Time Signature
-                          </label>
-                          <div className="glass-pill flex">
-                            {["", "4", "3", "6"].map((ts) => (
-                              <button
-                                key={ts}
-                                type="button"
-                                onClick={() => setTimeSignature(ts)}
-                                className={cn(
-                                  "glass-pill-segment flex-1 text-center",
-                                  timeSignature === ts && "active"
-                                )}
-                              >
-                                {ts ? ({ "4": "4/4", "3": "3/4", "6": "6/8" } as Record<string, string>)[ts] : "Auto"}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Seed */}
-                        <div className="space-y-1">
-                          <label htmlFor="seed" className="text-xs text-muted-foreground">
-                            Seed (leave empty for random)
-                          </label>
-                          <input
-                            id="seed"
-                            type="number"
-                            value={seed}
-                            onChange={(e) => setSeed(e.target.value)}
-                            placeholder="Random"
-                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Generation Settings (collapsible) */}
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvancedGen(!showAdvancedGen)}
-                      className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        className={cn(
-                          "transition-transform",
-                          showAdvancedGen && "rotate-90"
-                        )}
-                      >
-                        <path d="M4.5 2.5l4 3.5-4 3.5" />
-                      </svg>
-                      <span className="uppercase">Generation Settings</span>
-                    </button>
-
-                    {showAdvancedGen && (
-                      <div className="glass-subtle rounded-xl p-4 space-y-4">
-                        {/* Thinking toggle */}
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs text-muted-foreground flex-1">
-                            Thinking (Chain-of-Thought)
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setThinking(!thinking)}
-                            className={cn(
-                              "w-10 h-5 rounded-full transition-colors relative",
-                              thinking ? "bg-foreground/80" : "bg-foreground/20"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                                thinking ? "left-5" : "left-0.5"
-                              )}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Inference Steps */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-muted-foreground">
-                              Quality (Inference Steps)
-                            </label>
-                            <span className="text-xs text-muted-foreground/70">{inferenceSteps}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={1}
-                            max={20}
-                            step={1}
-                            value={inferenceSteps}
-                            onChange={(e) => setInferenceSteps(parseInt(e.target.value, 10))}
-                            className="w-full accent-foreground/60"
-                          />
-                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                            <span>Fast</span>
-                            <span>High Quality</span>
-                          </div>
-                        </div>
-
-                        {/* Inference Method */}
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">
-                            Inference Method
-                          </label>
-                          <div className="glass-pill flex">
-                            {(["ode", "sde"] as const).map((m) => (
-                              <button
-                                key={m}
-                                type="button"
-                                onClick={() => setInferMethod(m)}
-                                className={cn(
-                                  "glass-pill-segment flex-1 text-center",
-                                  inferMethod === m && "active"
-                                )}
-                              >
-                                {m === "ode" ? "ODE (Clean)" : "SDE (Textured)"}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* LM Temperature */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-muted-foreground">
-                              Creativity (LM Temperature)
-                            </label>
-                            <span className="text-xs text-muted-foreground/70">{lmTemperature.toFixed(2)}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={2}
-                            step={0.05}
-                            value={lmTemperature}
-                            onChange={(e) => setLmTemperature(parseFloat(e.target.value))}
-                            className="w-full accent-foreground/60"
-                          />
-                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                            <span>Predictable</span>
-                            <span>Creative</span>
-                          </div>
-                        </div>
-
-                        {/* LM CFG Scale */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-muted-foreground">
-                              LM Guidance (CFG Scale)
-                            </label>
-                            <span className="text-xs text-muted-foreground/70">{lmCfgScale.toFixed(1)}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={1}
-                            max={3}
-                            step={0.1}
-                            value={lmCfgScale}
-                            onChange={(e) => setLmCfgScale(parseFloat(e.target.value))}
-                            className="w-full accent-foreground/60"
-                          />
-                          <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                            <span>Free</span>
-                            <span>Guided</span>
-                          </div>
-                        </div>
-
-                        {/* LM Top-K & Top-P side by side */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs text-muted-foreground">Top-K</label>
-                              <span className="text-xs text-muted-foreground/70">{lmTopK || "Off"}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={1}
-                              value={lmTopK}
-                              onChange={(e) => setLmTopK(parseInt(e.target.value, 10))}
-                              className="w-full accent-foreground/60"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs text-muted-foreground">Top-P</label>
-                              <span className="text-xs text-muted-foreground/70">{lmTopP.toFixed(2)}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={1}
-                              step={0.05}
-                              value={lmTopP}
-                              onChange={(e) => setLmTopP(parseFloat(e.target.value))}
-                              className="w-full accent-foreground/60"
-                            />
-                          </div>
-                        </div>
-
-                        {/* LM Negative Prompt */}
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">
-                            Negative Prompt (things to avoid in generation)
-                          </label>
-                          <input
-                            type="text"
-                            value={lmNegativePrompt}
-                            onChange={(e) => setLmNegativePrompt(e.target.value)}
-                            placeholder="e.g. distortion, heavy bass, noise"
-                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vocal / Instrumental toggle */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Type
-                    </label>
-                    <div className="glass-pill flex">
-                      <button
-                        type="button"
-                        onClick={() => setIsInstrumental(false)}
-                        className={cn(
-                          "glass-pill-segment flex-1 text-center",
-                          !isInstrumental && "active"
-                        )}
-                      >
-                        Vocal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsInstrumental(true)}
-                        className={cn(
-                          "glass-pill-segment flex-1 text-center",
-                          isInstrumental && "active"
-                        )}
-                      >
-                        Instrumental
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Language (vocal only) */}
-                  {!isInstrumental && (
-                    <div className="space-y-1">
+                    {/* Music description */}
+                    <div className="space-y-2">
                       <label
-                        htmlFor="vocal-language"
+                        htmlFor="caption"
                         className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
                       >
-                        Language
+                        Music description
                       </label>
-                      <select
-                        id="vocal-language"
-                        value={vocalLanguage}
-                        onChange={(e) => setVocalLanguage(e.target.value)}
-                        className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
-                      >
-                        {LANGUAGES.map((lang) => (
-                          <option
-                            key={lang.value}
-                            value={lang.value}
-                            className="bg-white"
-                          >
-                            {lang.label}{lang.experimental ? " (experimental)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-muted-foreground">
-                        Some languages are experimental and may have lower lyric accuracy.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Lyrics editor (vocal only) */}
-                  {!isInstrumental && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Lyrics (optional)
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {SECTION_MARKERS.map((marker) => (
-                          <button
-                            key={marker}
-                            type="button"
-                            onClick={() => insertSectionMarker(marker)}
-                            className="glass-chip text-xs px-2.5 py-1"
-                          >
-                            {marker}
-                          </button>
-                        ))}
-                      </div>
                       <textarea
-                        ref={lyricsRef}
-                        value={lyrics}
-                        onChange={(e) => setLyrics(e.target.value)}
-                        placeholder="[Verse]\nYour lyrics here...\n\n[Chorus]\nSing along..."
-                        rows={6}
-                        maxLength={4096}
-                        className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 font-mono resize-none focus:outline-none"
+                        id="caption"
+                        value={caption}
+                        onChange={(e) => {
+                          setCaption(e.target.value);
+                          setSelectedGenre(null);
+                        }}
+                        placeholder="e.g. A melancholic piano ballad with soft strings and rain sounds..."
+                        rows={3}
+                        maxLength={512}
+                        className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
                       />
                     </div>
-                  )}
 
-                  {/* Lyrics density (vocal only) */}
-                  {!isInstrumental && (
+                    {/* Style tags */}
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Style tags</label>
+                        <input
+                          type="text"
+                          value={styleTags}
+                          onChange={(e) => setStyleTags(e.target.value)}
+                          placeholder="lofi, warm vinyl, soft piano"
+                          className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Avoid</label>
+                        <input
+                          type="text"
+                          value={negativeTags}
+                          onChange={(e) => setNegativeTags(e.target.value)}
+                          placeholder="no heavy drums, no distortion"
+                          className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Vocal / Instrumental toggle */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Lyrics density
+                        Type
                       </label>
                       <div className="glass-pill flex">
-                        {(["light", "moderate", "heavy"] as const).map((d) => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setLyricsDensity(d)}
-                            className={cn(
-                              "glass-pill-segment flex-1 text-center capitalize",
-                              lyricsDensity === d && "active"
-                            )}
-                          >
-                            {d}
-                          </button>
-                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setIsInstrumental(false)}
+                          className={cn(
+                            "glass-pill-segment flex-1 text-center",
+                            !isInstrumental && "active"
+                          )}
+                        >
+                          Vocal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsInstrumental(true)}
+                          className={cn(
+                            "glass-pill-segment flex-1 text-center",
+                            isInstrumental && "active"
+                          )}
+                        >
+                          Instrumental
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Section 2: Lyrics (vocal only) ── */}
+                  {!isInstrumental && (
+                    <div className="glass-subtle rounded-2xl p-6 space-y-5">
+                      <div className="text-xs font-bold text-accent uppercase tracking-widest">Lyrics</div>
+
+                      {/* Language */}
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="vocal-language"
+                          className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                        >
+                          Language
+                        </label>
+                        <select
+                          id="vocal-language"
+                          value={vocalLanguage}
+                          onChange={(e) => setVocalLanguage(e.target.value)}
+                          className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
+                        >
+                          {LANGUAGES.map((lang) => (
+                            <option
+                              key={lang.value}
+                              value={lang.value}
+                              className="bg-white"
+                            >
+                              {lang.label}{lang.experimental ? " (experimental)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                          Some languages are experimental and may have lower lyric accuracy.
+                        </p>
+                      </div>
+
+                      {/* Lyrics editor */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Lyrics (optional)
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {SECTION_MARKERS.map((marker) => (
+                            <button
+                              key={marker}
+                              type="button"
+                              onClick={() => insertSectionMarker(marker)}
+                              className="glass-chip text-xs px-2.5 py-1"
+                            >
+                              {marker}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          ref={lyricsRef}
+                          value={lyrics}
+                          onChange={(e) => setLyrics(e.target.value)}
+                          placeholder="[Verse]\nYour lyrics here...\n\n[Chorus]\nSing along..."
+                          rows={6}
+                          maxLength={4096}
+                          className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 font-mono resize-none focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Lyrics density */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Lyrics density
+                        </label>
+                        <div className="glass-pill flex">
+                          {(["light", "moderate", "heavy"] as const).map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setLyricsDensity(d)}
+                              className={cn(
+                                "glass-pill-segment flex-1 text-center capitalize",
+                                lyricsDensity === d && "active"
+                              )}
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Two-track variations */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Two-track variation
-                    </label>
-                    <div className="glass-pill flex">
-                      {(["subtle", "balanced", "bold"] as const).map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setContrastLevel(level)}
-                          className={cn(
-                            "glass-pill-segment flex-1 text-center capitalize",
-                            contrastLevel === level && "active"
-                          )}
-                        >
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                    {!isInstrumental && (
+                  {/* ── Section 3: Output settings ── */}
+                  <div className="glass-subtle rounded-2xl p-6 space-y-5">
+                    <div className="text-xs font-bold text-accent uppercase tracking-widest">Output settings</div>
+
+                    {/* Two-track variations */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Two-track variation
+                      </label>
+                      <div className="glass-pill flex">
+                        {(["subtle", "balanced", "bold"] as const).map((level) => (
+                          <button
+                            key={level}
+                            type="button"
+                            onClick={() => setContrastLevel(level)}
+                            className={cn(
+                              "glass-pill-segment flex-1 text-center capitalize",
+                              contrastLevel === level && "active"
+                            )}
+                          >
+                            {level}
+                          </button>
+                        ))}
+                      </div>
+                      {!isInstrumental && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={altLyrics}
+                            onChange={(e) => setAltLyrics(e.target.checked)}
+                          />
+                          Write unique lyrics for Track B
+                        </label>
+                      )}
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         <input
                           type="checkbox"
-                          checked={altLyrics}
-                          onChange={(e) => setAltLyrics(e.target.checked)}
+                          checked={autoSave}
+                          onChange={(e) => setAutoSave(e.target.checked)}
                         />
-                        Generate alternate lyrics for Track B
+                        Auto-save to Library
                       </label>
-                    )}
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={autoSave}
-                        onChange={(e) => setAutoSave(e.target.checked)}
-                      />
-                      Auto-save to Library
-                    </label>
-                  </div>
-
-                  {/* Duration slider */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Duration
-                      </label>
-                      <span className="text-sm font-mono text-foreground tabular-nums">
-                        {duration}s
-                      </span>
                     </div>
-                    <input
-                      type="range"
-                      min={10}
-                      max={120}
-                      step={5}
-                      value={duration}
-                      onChange={(e) => setDuration(parseInt(e.target.value, 10))}
-                      className="w-full"
-                      aria-label="Duration in seconds"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-                      <span>10s</span>
-                      <span>120s</span>
+
+                    {/* Duration slider */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Duration
+                        </label>
+                        <span className="text-sm font-mono text-foreground tabular-nums">
+                          {duration}s
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={10}
+                        max={120}
+                        step={5}
+                        value={duration}
+                        onChange={(e) => setDuration(parseInt(e.target.value, 10))}
+                        className="w-full"
+                        aria-label="Duration in seconds"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                        <span>10s</span>
+                        <span>120s</span>
+                      </div>
+                    </div>
+
+                    {/* Musical controls (collapsible) */}
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowMusicalControls(!showMusicalControls)}
+                        className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className={cn(
+                            "transition-transform",
+                            showMusicalControls && "rotate-90"
+                          )}
+                        >
+                          <path d="M4.5 2.5l4 3.5-4 3.5" />
+                        </svg>
+                        <span className="uppercase">Musical Controls</span>
+                      </button>
+
+                      {showMusicalControls && (
+                        <div className="glass-subtle rounded-xl p-4 space-y-4">
+                          {/* BPM */}
+                          <div className="space-y-1">
+                            <label htmlFor="bpm" className="text-xs text-muted-foreground">
+                              BPM (leave empty for auto)
+                            </label>
+                            <input
+                              id="bpm"
+                              type="number"
+                              min={40}
+                              max={240}
+                              value={bpm}
+                              onChange={(e) => setBpm(e.target.value)}
+                              placeholder="Auto"
+                              className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                            />
+                          </div>
+
+                          {/* Key */}
+                          <div className="space-y-1">
+                            <label htmlFor="musical-key" className="text-xs text-muted-foreground">
+                              Key (leave empty for auto)
+                            </label>
+                            <select
+                              id="musical-key"
+                              value={musicalKey}
+                              onChange={(e) => setMusicalKey(e.target.value)}
+                              className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer"
+                            >
+                              <option value="" className="bg-white">
+                                Auto
+                              </option>
+                              {MUSICAL_KEYS.map((k) => (
+                                <option key={k} value={k} className="bg-white">
+                                  {k}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Time Signature */}
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">
+                              Time Signature
+                            </label>
+                            <div className="glass-pill flex">
+                              {["", "4", "3", "6"].map((ts) => (
+                                <button
+                                  key={ts}
+                                  type="button"
+                                  onClick={() => setTimeSignature(ts)}
+                                  className={cn(
+                                    "glass-pill-segment flex-1 text-center",
+                                    timeSignature === ts && "active"
+                                  )}
+                                >
+                                  {ts ? ({ "4": "4/4", "3": "3/4", "6": "6/8" } as Record<string, string>)[ts] : "Auto"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Seed */}
+                          <div className="space-y-1">
+                            <label htmlFor="seed" className="text-xs text-muted-foreground">
+                              Seed (leave empty for random)
+                            </label>
+                            <input
+                              id="seed"
+                              type="number"
+                              value={seed}
+                              onChange={(e) => setSeed(e.target.value)}
+                              placeholder="Random"
+                              className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Generation Settings (collapsible) */}
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedGen(!showAdvancedGen)}
+                        className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className={cn(
+                            "transition-transform",
+                            showAdvancedGen && "rotate-90"
+                          )}
+                        >
+                          <path d="M4.5 2.5l4 3.5-4 3.5" />
+                        </svg>
+                        <span className="uppercase">Generation Settings</span>
+                      </button>
+
+                      {showAdvancedGen && (
+                        <div className="glass-subtle rounded-xl p-4 space-y-4">
+                          {/* Thinking toggle */}
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs text-muted-foreground flex-1">
+                              Thinking (Chain-of-Thought)
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setThinking(!thinking)}
+                              className={cn(
+                                "w-10 h-5 rounded-full transition-colors relative",
+                                thinking ? "bg-foreground/80" : "bg-foreground/20"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                                  thinking ? "left-5" : "left-0.5"
+                                )}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Quality steps */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">
+                                Quality steps
+                              </label>
+                              <span className="text-xs text-muted-foreground/70">{inferenceSteps}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={1}
+                              max={20}
+                              step={1}
+                              value={inferenceSteps}
+                              onChange={(e) => setInferenceSteps(parseInt(e.target.value, 10))}
+                              className="w-full accent-foreground/60"
+                            />
+                            <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                              <span>Fast</span>
+                              <span>High Quality</span>
+                            </div>
+                          </div>
+
+                          {/* Inference Method */}
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">
+                              Inference Method
+                            </label>
+                            <div className="glass-pill flex">
+                              {(["ode", "sde"] as const).map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => setInferMethod(m)}
+                                  className={cn(
+                                    "glass-pill-segment flex-1 text-center",
+                                    inferMethod === m && "active"
+                                  )}
+                                >
+                                  {m === "ode" ? "ODE (Clean)" : "SDE (Textured)"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Creativity */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">
+                                Creativity
+                              </label>
+                              <span className="text-xs text-muted-foreground/70">{lmTemperature.toFixed(2)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={2}
+                              step={0.05}
+                              value={lmTemperature}
+                              onChange={(e) => setLmTemperature(parseFloat(e.target.value))}
+                              className="w-full accent-foreground/60"
+                            />
+                            <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                              <span>Predictable</span>
+                              <span>Creative</span>
+                            </div>
+                          </div>
+
+                          {/* Prompt adherence */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-muted-foreground">
+                                Prompt adherence
+                              </label>
+                              <span className="text-xs text-muted-foreground/70">{lmCfgScale.toFixed(1)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={1}
+                              max={3}
+                              step={0.1}
+                              value={lmCfgScale}
+                              onChange={(e) => setLmCfgScale(parseFloat(e.target.value))}
+                              className="w-full accent-foreground/60"
+                            />
+                            <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                              <span>Free</span>
+                              <span>Guided</span>
+                            </div>
+                          </div>
+
+                          {/* LM Top-K & Top-P side by side */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs text-muted-foreground">Top-K</label>
+                                <span className="text-xs text-muted-foreground/70">{lmTopK || "Off"}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={lmTopK}
+                                onChange={(e) => setLmTopK(parseInt(e.target.value, 10))}
+                                className="w-full accent-foreground/60"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs text-muted-foreground">Top-P</label>
+                                <span className="text-xs text-muted-foreground/70">{lmTopP.toFixed(2)}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={lmTopP}
+                                onChange={(e) => setLmTopP(parseFloat(e.target.value))}
+                                className="w-full accent-foreground/60"
+                              />
+                            </div>
+                          </div>
+
+                          {/* LM Negative Prompt */}
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">
+                              Negative Prompt (things to avoid in generation)
+                            </label>
+                            <input
+                              type="text"
+                              value={lmNegativePrompt}
+                              onChange={(e) => setLmNegativePrompt(e.target.value)}
+                              placeholder="e.g. distortion, heavy bass, noise"
+                              className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2173,28 +2255,27 @@ function CreatePageInner() {
       </main>
 
       {/* Footer */}
-      <footer className="px-6 py-12 border-t border-black/[0.04]">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="font-display font-bold text-foreground">Riff</span>
-              <span className="text-sm text-muted-foreground">— Free &amp; open-source music generation</span>
+      <footer className="px-6 py-16 border-t border-black/[0.04] mt-12">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 pb-10 border-b border-black/5">
+            <div className="flex items-center gap-3">
+              <div className="size-9 rounded-lg bg-accent text-white flex items-center justify-center">
+                <Logo showText={false} className="text-white" />
+              </div>
+              <span className="font-semibold font-display text-foreground text-xl">
+                Riff <span className="text-muted-foreground font-normal text-base ml-2">— Free &amp; open-source music generation</span>
+              </span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a
-                href="https://github.com/ace-step/ACE-Step-1.5"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                GitHub
+            <div className="flex items-center gap-8 font-medium text-sm text-muted-foreground">
+              <Link href="/library" className="hover:text-accent transition-colors">Library</Link>
+              <a href="https://github.com/ace-step/ACE-Step-1.5" target="_blank" rel="noopener noreferrer" className="text-xl hover:text-foreground transition-colors" aria-label="GitHub">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
               </a>
-              <span className="px-2 py-1 bg-black/5 rounded text-[11px] font-mono">v1.5.0</span>
             </div>
           </div>
-          <div className="text-center">
+          <div className="pt-8 text-center">
             <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest">
-              Built with ACE-Step. Open Source. MIT Licensed. © 2024 Riff AI.
+              Powered by ACE-Step. Open Source. MIT Licensed. © 2025 Riff.
             </p>
           </div>
         </div>
