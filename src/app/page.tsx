@@ -177,6 +177,7 @@ export default function HomePage() {
 
   // Smart mode state
   const [smartPrompt, setSmartPrompt] = useState("");
+  const smartPromptRef = useRef(smartPrompt);
   const [vibe, setVibe] = useState<string | null>(null);
   const [lyricsDensity, setLyricsDensity] = useState<LyricsDensity>("moderate");
   const [autoSave, setAutoSave] = useState(true);
@@ -320,6 +321,7 @@ export default function HomePage() {
                       await saveTrack({
                         id: job.id,
                         title: makeTitle(trackMeta.caption),
+                        prompt: smartPromptRef.current,
                         caption: trackMeta.caption,
                         lyrics: trackMeta.lyrics,
                         duration: trackMeta.duration,
@@ -385,6 +387,7 @@ export default function HomePage() {
   useEffect(() => { trackJobsRef.current = trackJobs; }, [trackJobs]);
   useEffect(() => { previewTracksRef.current = previewTracks; }, [previewTracks]);
   useEffect(() => { autoSaveRef.current = autoSave; }, [autoSave]);
+  useEffect(() => { smartPromptRef.current = smartPrompt; }, [smartPrompt]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────
 
@@ -748,6 +751,7 @@ export default function HomePage() {
       await saveTrack({
         id: job.id,
         title: makeTitle(meta.caption),
+        prompt: smartPrompt,
         caption: meta.caption,
         lyrics: meta.lyrics,
         duration: meta.duration,
@@ -926,15 +930,15 @@ export default function HomePage() {
       {/* Header */}
       <header className="px-6 py-5">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <button type="button" onClick={handleReset} className="flex items-center gap-3 cursor-pointer">
             <div className="size-11 rounded-xl bg-accent text-white flex items-center justify-center shadow-[0_2px_8px_rgba(249,115,22,0.25)]">
               <Logo showText={false} className="text-white" />
             </div>
-            <div>
+            <div className="text-left">
               <div className="text-lg font-semibold font-display">Riff</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">OPEN-SOURCE MUSIC GENERATOR</div>
             </div>
-          </Link>
+          </button>
           <div className="flex items-center gap-6 text-sm">
             <Link
               href="/library"

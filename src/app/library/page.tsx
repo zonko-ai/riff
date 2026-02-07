@@ -148,6 +148,11 @@ export default function LibraryPage() {
                     </span>
                   </div>
 
+                  {/* Original prompt */}
+                  {track.prompt && (
+                    <p className="text-sm text-muted-foreground text-pretty">{track.prompt}</p>
+                  )}
+
                   {/* Player */}
                   <AudioPlayer src={audioUrls[track.id]} showActions={false} />
 
@@ -180,11 +185,11 @@ export default function LibraryPage() {
                         >
                           <path d="M4.5 2.5l4 3.5-4 3.5" />
                         </svg>
-                        Prompt &amp; Lyrics
+                        Style &amp; Lyrics
                       </summary>
                       <div className="mt-3 glass-subtle rounded-xl p-4 space-y-3">
                         <div>
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Prompt</div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground/60">Style</div>
                           <p className="text-sm text-muted-foreground text-pretty mt-1">
                             {track.caption}
                           </p>

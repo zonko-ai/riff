@@ -1,6 +1,7 @@
 export type LibraryTrack = {
   id: string;
   title: string;
+  prompt?: string;
   caption: string;
   lyrics: string;
   duration: number;
