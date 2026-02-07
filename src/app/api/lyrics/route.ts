@@ -33,15 +33,18 @@ export async function POST(req: NextRequest) {
       th: "Thai", vi: "Vietnamese", tr: "Turkish",
     };
     const langName = language ? LANG_NAMES[language] || language : null;
+    const SCRIPT_NAMES: Record<string, string> = {
+      hi: "Devanagari", zh: "Simplified Chinese characters", ja: "Japanese (Hiragana/Katakana/Kanji)",
+      ko: "Hangul", ar: "Arabic script", th: "Thai script", ru: "Cyrillic",
+    };
+    const scriptName = language ? SCRIPT_NAMES[language] : null;
     const languageInstruction = langName && langName !== "English"
-      ? `\n\nLANGUAGE: Write ALL lyrics entirely in ${langName}. Every single lyric line MUST be in ${langName} script/characters — absolutely NO English words in the lyrics. The total amount of lyric content (number of lines and syllables) must be proportional to the song duration of ${targetDuration} seconds — write more lines for longer songs, fewer for shorter ones. The caption should still be in English but MUST include "${langName} vocals" in the vocal style section.`
+      ? `\n\nLANGUAGE: Write ALL lyrics in ${langName}${scriptName ? ` using ${scriptName} script — NOT romanized transliteration` : ""}. No English words in lyrics. Lyric length must match ${targetDuration}s duration. Caption stays in English but include "${langName} vocals".`
       : "";
 
     const voiceInstruction = voiceGender && voiceGender !== "auto"
-      ? `\n\nVOICE: The vocalist is ${voiceGender}. The caption MUST include "${voiceGender} vocal" in the vocal style. All vocal references must be ${voiceGender}.`
+      ? `\n\nVOICE: Caption MUST include "${voiceGender} vocal". The singer is ${voiceGender}.`
       : "";
-
-    const timingInstruction = `\n\nTIMING: Vocals and lyrics MUST begin within the first 15 seconds of the song. Do NOT write long instrumental intros. Keep any [Intro] section to 2-4 bars maximum, then immediately start the first verse or chorus. The listener should hear singing early.`;
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -79,133 +82,84 @@ export async function POST(req: NextRequest) {
 
     // For alternate versions, we want COMPLETELY different musical direction
     const contrastMap: Record<string, string> = {
-      subtle: `Create a variation with:
-- Same genre family but different sub-genre (e.g., if pop → indie pop, if rock → soft rock)
-- Shift tempo by 10-20 BPM slower or faster
-- Swap one main instrument (e.g., piano → acoustic guitar, synth → strings)
-- Keep the same emotional core but soften or intensify it slightly`,
-      balanced: `Create a distinctly different version with:
-- Different genre approach (e.g., if electronic → acoustic, if rock → R&B-influenced)
-- Different tempo feel (if upbeat → mid-tempo groove, if slow → more driving rhythm)
-- Different instrumentation palette (swap at least 2-3 main instruments)
-- Shift the production era (e.g., if modern → vintage 80s vibe, if lo-fi → polished)
-- Different vocal style (if powerful → intimate, if breathy → confident)`,
-      bold: `Reimagine this completely:
-- Entirely different genre (e.g., ballad → uptempo dance, rock → jazz, electronic → folk)
-- Opposite energy level (if chill → energetic, if intense → laid-back)
-- Completely different instrumentation (if guitars → synths, if acoustic → electronic)
-- Different era/production aesthetic (if modern → retro, if polished → raw)
-- Different vocal character (if female-sounding → male-sounding style description, if smooth → gritty)`,
+      subtle: "Change 1-2 tags: shift sub-genre or swap one instrument. Keep same mood and energy.",
+      balanced: "Change 3-4 tags: different genre approach, different instruments, shift vocal style or tempo.",
+      bold: "Change everything: opposite genre, different energy, completely different instrumentation and vocal character.",
     };
 
     const isAlternate = variant === "alternate";
 
     const systemPrompt = isAlternate
-      ? `You are a professional music producer creating an ALTERNATE VERSION of a song.
+      ? `You are a music metadata generator creating an ALTERNATE VERSION of a song.
 
-CRITICAL: The alternate version must sound DISTINCTLY DIFFERENT from the original. Not just different words — different SOUND.
-
+The alternate must sound DIFFERENT from the original.
 ${contrast ? contrastMap[contrast] : contrastMap.balanced}
 
-ORIGINAL SONG REFERENCE (create something that contrasts with this):
+ORIGINAL (contrast with this):
 Caption: ${baseCaption || "not provided"}
-${baseLyrics ? `Lyrics structure: ${baseLyrics.substring(0, 500)}...` : ""}
 
-Based on the user's original concept, generate a contrasting alternate version.
+## CAPTION FORMAT
+Short comma-separated tags. 5-8 descriptors, UNDER 200 CHARACTERS total.
+Format: genre, mood, instrument, instrument, vocal type, texture
 
-## CAPTION FORMULA (max 450 chars)
-Write a multi-dimensional caption covering ALL of these:
-1. GENRE + SUB-GENRE: Be specific (not just "pop" but "synth-pop" or "indie pop")
-2. MOOD/EMOTION: 2-3 emotional descriptors (melancholic, bittersweet, wistful OR euphoric, triumphant, uplifting)
-3. INSTRUMENTS: List 3-4 specific instruments (not "guitar" but "warm acoustic guitar fingerpicking")
-4. TIMBRE/TEXTURE: Sound quality words (warm, crisp, airy, punchy, lush, gritty, polished)
-5. TEMPO FEEL: (slow ballad, mid-tempo groove, driving uptempo, laid-back)
-6. VOCAL STYLE: (breathy female vocal, raspy male voice, intimate whisper, powerful belting)
-7. ERA/PRODUCTION: (80s synthwave, 90s grunge, modern minimal, vintage soul, lo-fi bedroom)
-
-EXAMPLE ALTERNATE CAPTIONS:
-- Original: "upbeat pop song about summer love"
-  Subtle alternate: "breezy indie pop, wistful nostalgia, jangling electric guitar, soft synth pads, warm analog sound, mid-tempo groove, airy female vocal, early 2010s blog-era production"
-  Balanced alternate: "dreamy R&B, romantic longing, smooth electric piano, subtle 808s, lush pad textures, slow sensual groove, silky falsetto male vocal, modern bedroom production"
-  Bold alternate: "melancholic folk ballad, heartache and memory, fingerpicked acoustic guitar, soft violin, intimate lo-fi warmth, slow contemplative tempo, vulnerable whispered vocal, 70s singer-songwriter aesthetic"
+EXAMPLES:
+- "synth-pop, euphoric, bright synths, punchy drums, soaring female vocal, polished 80s production"
+- "lo-fi hip hop, mellow, warm electric piano, vinyl crackle, smooth male vocal, bedroom aesthetic"
+- "indie folk, melancholic, fingerpicked acoustic guitar, soft cello, breathy female vocal, intimate lo-fi"
 
 ## LYRICS FORMAT
-Use section markers with vocal/energy tags:
-- [Verse - intimate] or [Verse - storytelling]
-- [Pre-Chorus - building]
-- [Chorus - anthemic] or [Chorus - explosive] or [Chorus - soaring]
-- [Bridge - whispered] or [Bridge - powerful]
-- [Outro - fading] or [Outro - triumphant]
+ONLY use these tags — no modifiers, no custom tags:
+[Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro]
 
-Keep 6-10 syllables per line for natural rhythm.
-Use CAPS for emphasized words: "We ARE the champions"
-Use (parentheses) for backing vocals: "Rise up (rise up)"
+CRITICAL RULES:
+- ALWAYS start lyrics with [Verse] — NEVER use [Intro] or any instrumental opening
+- 6-10 syllables per line, consistent within each section
+- CAPS for emphasis: "We ARE the ones"
+- (parentheses) for backing vocals: "Rise up (rise up)"
+- Blank line between sections
 
-${densityInstruction}${languageInstruction}${voiceInstruction}${timingInstruction}
+${densityInstruction}${languageInstruction}${voiceInstruction}
 
 Respond in this exact JSON format:
 {
-  "caption": "your detailed multi-dimensional music caption here",
-  "lyrics": "[Verse - tag]\\nLyrics...\\n\\n[Chorus - tag]\\nChorus..."
+  "caption": "genre, mood, instruments, vocal, texture",
+  "lyrics": "[Verse]\\nLyrics...\\n\\n[Chorus]\\nChorus..."
 }
 
 Only respond with valid JSON, no markdown.`
-      : `You are a professional music producer and songwriter. Given a description, generate a song.
+      : `You are a music metadata generator. Given a user description, generate a caption and lyrics.
 
-## CAPTION FORMULA (max 450 chars)
-Write a rich, multi-dimensional caption covering ALL of these elements:
+## CAPTION FORMAT
+Short comma-separated tags. 5-8 descriptors, UNDER 200 CHARACTERS total.
+Format: genre, mood, instrument, instrument, vocal type, texture
 
-1. GENRE + SUB-GENRE: Be specific (not just "rock" but "alternative rock" or "indie rock")
-2. MOOD/EMOTION: 2-3 emotional descriptors that paint the feeling
-   - Sad: melancholic, wistful, heartbroken, bittersweet, somber, lonely, aching
-   - Happy: euphoric, jubilant, carefree, uplifting, warm, sunny, playful
-   - Chill: dreamy, hazy, relaxed, mellow, peaceful, floating, serene
-   - Epic: triumphant, soaring, cinematic, powerful, anthemic, majestic
-   - Dark: brooding, intense, mysterious, haunting, atmospheric, tense
-   - Romantic: intimate, tender, sensual, passionate, yearning, devoted
-3. INSTRUMENTS: List 3-4 specific instruments with descriptors
-   - Not "piano" but "soft grand piano" or "bright honky-tonk piano"
-   - Not "guitar" but "warm acoustic guitar fingerpicking" or "overdriven electric guitar"
-   - Not "drums" but "punchy live drums" or "crisp electronic beats" or "808 bass hits"
-4. TIMBRE/TEXTURE: Sound quality (warm, bright, crisp, muddy, airy, punchy, lush, raw, polished, gritty)
-5. TEMPO FEEL: (slow ballad, mid-tempo groove, driving uptempo, energetic, laid-back, bouncy)
-6. VOCAL STYLE: (breathy female vocal, powerful male belting, intimate whisper, raspy delivery, smooth R&B runs, punk snarl)
-7. ERA/PRODUCTION: (80s synthwave, 90s grunge, 2000s pop-punk, modern minimal, vintage soul, lo-fi bedroom, stadium rock)
+EXAMPLES:
+- "synth-pop, euphoric, bright synths, punchy drums, soaring female vocal, polished 80s production"
+- "lo-fi hip hop, mellow, warm electric piano, vinyl crackle, smooth male vocal, bedroom aesthetic"
+- "indie folk, melancholic, fingerpicked acoustic guitar, soft cello, breathy female vocal, intimate lo-fi"
+- "cinematic orchestral rock, triumphant, soaring strings, thundering drums, powerful male vocal, stadium production"
 
-EXAMPLE CAPTIONS BY MOOD:
-- SAD: "melancholic indie folk, aching heartbreak, fingerpicked acoustic guitar, soft cello swells, intimate lo-fi warmth, slow contemplative tempo, vulnerable breathy female vocal, rainy day bedroom recording aesthetic"
-- HAPPY: "euphoric synth-pop, carefree summer joy, bright analog synths, punchy drum machine, shimmering arpeggios, driving uptempo groove, soaring confident female vocal, polished 80s-inspired production"
-- CHILL: "dreamy lo-fi R&B, hazy late-night mood, warm electric piano, subtle vinyl crackle, soft 808 bass, laid-back head-nod groove, smooth intimate male vocal, bedroom producer aesthetic"
-- EPIC: "cinematic orchestral rock, triumphant anthem, soaring string section, powerful electric guitars, thundering drums, building crescendo, anthemic choir-backed male vocal, stadium-ready production"
-- DARK: "brooding industrial electronic, tense atmospheric dread, distorted synth bass, glitchy percussion, dark ambient textures, slow menacing pulse, processed robotic vocal, dystopian soundscape"
-- ROMANTIC: "intimate acoustic soul, tender devotion, warm nylon guitar, soft brushed drums, gentle piano touches, slow sensual groove, silky falsetto male vocal, candlelit recording warmth"
-
-${vibe ? `The mood/vibe MUST be: ${vibe}. Make sure the caption strongly reflects this mood with appropriate genre, instruments, tempo, and vocal style.` : ""}
+${vibe ? `The vibe/mood MUST be "${vibe}". Reflect this in genre choice, instruments, and vocal style.` : ""}
 
 ## LYRICS FORMAT
-Structure with section markers AND vocal/energy tags:
-- [Intro - atmospheric] (optional instrumental opening)
-- [Verse - intimate] or [Verse - storytelling] or [Verse - building]
-- [Pre-Chorus - rising] (optional, builds to chorus)
-- [Chorus - anthemic] or [Chorus - explosive] or [Chorus - soaring] or [Chorus - catchy]
-- [Bridge - whispered] or [Bridge - powerful] or [Bridge - breakdown]
-- [Outro - fading] or [Outro - triumphant] or [Outro - reflective]
+ONLY use these tags — no modifiers, no custom tags:
+[Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro]
 
-LINE FORMATTING:
-- Keep 6-10 syllables per line for natural rhythm
-- Use CAPS for emphasized/shouted words: "We ARE the ones"
-- Use (parentheses) for backing vocals/echoes: "Never let go (let go)"
+CRITICAL RULES:
+- ALWAYS start lyrics with [Verse] — NEVER use [Intro] or any instrumental opening
+- 6-10 syllables per line, consistent within each section
+- CAPS for emphasis: "We ARE the ones"
+- (parentheses) for backing vocals: "Rise up (rise up)"
 - Blank line between sections
+- Lyrics should be personal, emotional, and match the user's description
+- If names are mentioned, weave them naturally into the lyrics
 
-${densityInstruction}${languageInstruction}${voiceInstruction}${timingInstruction}
-
-The lyrics should be personal, emotional, and match the user's description.
-If names are mentioned, weave them naturally into the lyrics.
+${densityInstruction}${languageInstruction}${voiceInstruction}
 
 Respond in this exact JSON format:
 {
-  "caption": "your detailed multi-dimensional music caption here (max 450 chars)",
-  "lyrics": "[Verse - tag]\\nLyrics here...\\n\\n[Chorus - tag]\\nChorus here..."
+  "caption": "genre, mood, instruments, vocal, texture",
+  "lyrics": "[Verse]\\nLyrics here...\\n\\n[Chorus]\\nChorus here..."
 }
 
 Only respond with valid JSON, no markdown or extra text.`;
