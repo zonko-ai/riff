@@ -20,9 +20,21 @@ export async function POST(req: NextRequest) {
       baseLyrics,
       baseCaption,
       contrast,
+      language,
     } = await req.json();
 
     const targetDuration = Math.min(Math.max(Number(duration) || 30, 10), 120);
+
+    const LANG_NAMES: Record<string, string> = {
+      en: "English", es: "Spanish", fr: "French", ja: "Japanese",
+      ko: "Korean", zh: "Chinese (Mandarin)", hi: "Hindi", pt: "Portuguese",
+      de: "German", ar: "Arabic", it: "Italian", ru: "Russian",
+      th: "Thai", vi: "Vietnamese", tr: "Turkish",
+    };
+    const langName = language ? LANG_NAMES[language] || language : null;
+    const languageInstruction = langName && langName !== "English"
+      ? `\n\nLANGUAGE: Write ALL lyrics in ${langName}. The lyrics MUST be in ${langName} script/language, not English. The caption should still be in English (it describes the music style), but include "${langName} vocals" or "${langName} singing" in the vocal style section of the caption.`
+      : "";
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -122,7 +134,7 @@ Keep 6-10 syllables per line for natural rhythm.
 Use CAPS for emphasized words: "We ARE the champions"
 Use (parentheses) for backing vocals: "Rise up (rise up)"
 
-${densityInstruction}
+${densityInstruction}${languageInstruction}
 
 Respond in this exact JSON format:
 {
@@ -246,6 +258,7 @@ Only respond with valid JSON, no markdown or extra text.`;
         targetDuration: targetDuration,
         densityInstruction,
         contrast: contrast || null,
+        language: language || null,
         rawResponse: content,
       },
     });

@@ -421,6 +421,7 @@ function CreatePageInner() {
       baseLyrics?: string;
       baseCaption?: string;
       contrast?: ContrastLevel;
+      language?: string;
     }) => {
       const payload = {
         prompt: opts.prompt,
@@ -431,6 +432,7 @@ function CreatePageInner() {
         baseLyrics: opts.baseLyrics,
         baseCaption: opts.baseCaption,
         contrast: opts.contrast,
+        language: opts.language,
       };
       console.group(`%c[RIFF] generateLyrics (${opts.variant || "primary"})`, "color: #f59e0b; font-weight: bold");
       console.log("Request payload:", payload);
@@ -625,11 +627,13 @@ function CreatePageInner() {
     setState("writing-lyrics");
     try {
       console.log("Generating primary lyrics...");
+      const lang = vocalLanguage === "auto" ? undefined : vocalLanguage;
       const primary = await generateLyrics({
         prompt,
         vibe,
         lyricsDensity,
         duration,
+        language: lang,
       });
 
       const finalDuration = primary.duration || duration;
@@ -649,6 +653,7 @@ function CreatePageInner() {
             baseLyrics: primary.lyrics,
             baseCaption: primary.caption,
             contrast: contrastLevel,
+            language: lang,
           });
         console.log("Alternate result — caption:", secondary.caption);
         console.log("Alternate result — lyrics:", secondary.lyrics);
@@ -733,10 +738,12 @@ function CreatePageInner() {
       setState("writing-lyrics");
       try {
         console.log("No manual lyrics — generating from caption...");
+        const proLang = vocalLanguage === "auto" ? undefined : vocalLanguage;
         const primary = await generateLyrics({
           prompt: baseCaption,
           lyricsDensity,
           duration,
+          language: proLang,
         });
         const finalDuration = primary.duration || duration;
         primaryLyrics = primary.lyrics;
@@ -754,6 +761,7 @@ function CreatePageInner() {
             baseLyrics: primary.lyrics,
             baseCaption: primary.caption,
             contrast: contrastLevel,
+            language: proLang,
           });
           secondaryLyrics = secondary.lyrics;
           console.log("Alternate lyrics generated");
@@ -771,6 +779,7 @@ function CreatePageInner() {
       setState("writing-lyrics");
       try {
         console.log("Manual lyrics provided, generating alternate...");
+        const proLang2 = vocalLanguage === "auto" ? undefined : vocalLanguage;
         const secondary = await generateLyrics({
           prompt: baseCaption,
           duration,
@@ -778,6 +787,7 @@ function CreatePageInner() {
           baseLyrics: primaryLyrics,
           baseCaption: baseCaption,
           contrast: contrastLevel,
+          language: proLang2,
         });
         secondaryLyrics = secondary.lyrics;
         console.log("Alternate lyrics generated");
@@ -967,6 +977,7 @@ function CreatePageInner() {
     setError(null);
     setState("writing-lyrics");
     try {
+      const rewriteLang = vocalLanguage === "auto" ? undefined : vocalLanguage;
       const response = await generateLyrics({
         prompt: `Rewrite only the chorus for this song. Return full lyrics with section markers.`,
         duration: track.duration,
@@ -974,6 +985,7 @@ function CreatePageInner() {
         baseLyrics: track.lyrics,
         baseCaption: track.caption,
         contrast: contrastLevel,
+        language: rewriteLang,
       });
 
       const newChorus = extractSection(response.lyrics, "Chorus");
