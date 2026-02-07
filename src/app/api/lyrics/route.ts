@@ -34,12 +34,14 @@ export async function POST(req: NextRequest) {
     };
     const langName = language ? LANG_NAMES[language] || language : null;
     const languageInstruction = langName && langName !== "English"
-      ? `\n\nLANGUAGE: Write ALL lyrics in ${langName}. The lyrics MUST be in ${langName} script/language, not English. The caption should still be in English (it describes the music style), but include "${langName} vocals" or "${langName} singing" in the vocal style section of the caption.`
+      ? `\n\nLANGUAGE: Write ALL lyrics entirely in ${langName}. Every single lyric line MUST be in ${langName} script/characters — absolutely NO English words in the lyrics. The total amount of lyric content (number of lines and syllables) must be proportional to the song duration of ${targetDuration} seconds — write more lines for longer songs, fewer for shorter ones. The caption should still be in English but MUST include "${langName} vocals" in the vocal style section.`
       : "";
 
     const voiceInstruction = voiceGender && voiceGender !== "auto"
       ? `\n\nVOICE: The vocalist is ${voiceGender}. The caption MUST include "${voiceGender} vocal" in the vocal style. All vocal references must be ${voiceGender}.`
       : "";
+
+    const timingInstruction = `\n\nTIMING: Vocals and lyrics MUST begin within the first 15 seconds of the song. Do NOT write long instrumental intros. Keep any [Intro] section to 2-4 bars maximum, then immediately start the first verse or chorus. The listener should hear singing early.`;
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -139,7 +141,7 @@ Keep 6-10 syllables per line for natural rhythm.
 Use CAPS for emphasized words: "We ARE the champions"
 Use (parentheses) for backing vocals: "Rise up (rise up)"
 
-${densityInstruction}${languageInstruction}${voiceInstruction}
+${densityInstruction}${languageInstruction}${voiceInstruction}${timingInstruction}
 
 Respond in this exact JSON format:
 {
@@ -195,7 +197,7 @@ LINE FORMATTING:
 - Use (parentheses) for backing vocals/echoes: "Never let go (let go)"
 - Blank line between sections
 
-${densityInstruction}${languageInstruction}${voiceInstruction}
+${densityInstruction}${languageInstruction}${voiceInstruction}${timingInstruction}
 
 The lyrics should be personal, emotional, and match the user's description.
 If names are mentioned, weave them naturally into the lyrics.

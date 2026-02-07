@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { saveTrack, makeTitle } from "@/lib/library";
-import { GenrePills } from "@/components/genre-pills";
 import { AudioPlayer } from "@/components/audio-player";
 import { GeneratingState } from "@/components/generating-state";
 import { AudioUpload } from "@/components/audio-upload";
@@ -58,8 +57,6 @@ type AppState =
   | "queued"
   | "generating"
   | "player";
-
-type Mode = "smart" | "pro";
 
 type TaskType = "text2music" | "cover" | "repaint" | "complete" | "extract";
 
@@ -124,12 +121,6 @@ type TrackJob = {
 
 const VIBES = ["Chill", "Hype", "Sad", "Romantic", "Epic", "Fun", "Dark", "Dreamy"] as const;
 
-const MUSICAL_KEYS = [
-  "C Major", "C minor", "D Major", "D minor", "Eb Major", "E Major", "E minor",
-  "F Major", "F minor", "F# Major", "G Major", "G minor", "Ab Major", "A Major",
-  "A minor", "Bb Major", "B Major", "B minor",
-] as const;
-
 type LanguageOption = { label: string; value: string; experimental?: boolean };
 
 const LANGUAGES: LanguageOption[] = [
@@ -151,8 +142,6 @@ const LANGUAGES: LanguageOption[] = [
   { label: "Turkish", value: "tr", experimental: true },
 ];
 
-const SECTION_MARKERS = ["[Verse]", "[Chorus]", "[Bridge]", "[Outro]", "[Intro]"] as const;
-
 const DEFAULT_TRACK: TrackDraft = {
   caption: "",
   lyrics: "",
@@ -165,7 +154,6 @@ const DEFAULT_TRACK: TrackDraft = {
 export default function HomePage() {
   // Core state machine
   const [state, setState] = useState<AppState>("compose");
-  const [mode, setMode] = useState<Mode>("smart");
   const [taskType, setTaskType] = useState<TaskType>("text2music");
 
   // Audio upload state
@@ -173,14 +161,10 @@ export default function HomePage() {
   const [uploadedAudioName, setUploadedAudioName] = useState("");
 
   // Generation params
-  const [shift, setShift] = useState(3.0);
-  const [guidanceScale, setGuidanceScale] = useState(7.0);
   const [audioFormat, setAudioFormat] = useState<"mp3" | "flac" | "wav">("mp3");
   const [repaintStart, setRepaintStart] = useState(0);
   const [repaintEnd, setRepaintEnd] = useState(-1);
   const [coverStrength, setCoverStrength] = useState(1.0);
-  const [useCotMetas, setUseCotMetas] = useState(true);
-  const [useCotCaption, setUseCotCaption] = useState(true);
 
   // Extract results
   const [extractResult, setExtractResult] = useState<ExtractMetadata | null>(null);
@@ -198,28 +182,10 @@ export default function HomePage() {
   const [autoSave, setAutoSave] = useState(true);
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("auto");
 
-  // Pro mode state
+  // Audio task state
   const [caption, setCaption] = useState("");
   const [lyrics, setLyrics] = useState("");
-  const [styleTags, setStyleTags] = useState("");
-  const [negativeTags, setNegativeTags] = useState("");
-  const [seed, setSeed] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [genreSearch, setGenreSearch] = useState("");
-  const [bpm, setBpm] = useState("");
-  const [musicalKey, setMusicalKey] = useState("");
-  const [timeSignature, setTimeSignature] = useState("");
   const [vocalLanguage, setVocalLanguage] = useState("auto");
-  const [showMusicalControls, setShowMusicalControls] = useState(false);
-  const [showAdvancedGen, setShowAdvancedGen] = useState(false);
-  const [inferenceSteps, setInferenceSteps] = useState(8);
-  const [thinking, setThinking] = useState(true);
-  const [inferMethod, setInferMethod] = useState("ode");
-  const [lmTemperature, setLmTemperature] = useState(0.85);
-  const [lmCfgScale, setLmCfgScale] = useState(2.0);
-  const [lmTopK, setLmTopK] = useState(0);
-  const [lmTopP, setLmTopP] = useState(0.9);
-  const [lmNegativePrompt, setLmNegativePrompt] = useState("");
 
   // Drafts and jobs
   const [previewTracks, setPreviewTracks] = useState<TrackDraft[]>([
@@ -239,24 +205,8 @@ export default function HomePage() {
 
   // Refs
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lyricsRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── Helpers ────────────────────────────────────────────────────────────
-
-  const parseSeed = (value: string) => {
-    if (!value.trim()) return undefined;
-    const number = Number.parseInt(value, 10);
-    return Number.isFinite(number) ? number : undefined;
-  };
-
-  const buildCaptionWithTags = (base: string) => {
-    let result = base.trim();
-    const tags = styleTags.trim();
-    const avoid = negativeTags.trim();
-    if (tags) result += ` | Style tags: ${tags}`;
-    if (avoid) result += ` | Avoid: ${avoid}`;
-    return result;
-  };
 
   const buildContrastCaption = (base: string) => {
     const instructions: Record<ContrastLevel, string> = {
@@ -272,7 +222,6 @@ export default function HomePage() {
     lyricsValue: string,
     durationValue: number,
     instrumentalValue: boolean,
-    seedValue?: number,
     overrides?: Partial<TrackDraft>
   ): TrackDraft => {
     // Voice gender safety net: if caption doesn't mention the gender, append it
@@ -289,24 +238,8 @@ export default function HomePage() {
       lyrics: lyricsValue,
       duration: durationValue,
       instrumental: instrumentalValue,
-      bpm: bpm || undefined,
-      keyscale: musicalKey || undefined,
-      timesignature: timeSignature || undefined,
       vocal_language: vocalLanguage === "auto" ? undefined : vocalLanguage,
-      seed: seedValue !== undefined ? String(seedValue) : undefined,
-      inference_steps: inferenceSteps,
-      thinking,
-      infer_method: inferMethod,
-      shift,
-      guidance_scale: guidanceScale,
       audio_format: audioFormat,
-      use_cot_metas: useCotMetas,
-      use_cot_caption: useCotCaption,
-      lm_temperature: lmTemperature,
-      lm_cfg_scale: lmCfgScale,
-      lm_top_k: lmTopK,
-      lm_top_p: lmTopP,
-      lm_negative_prompt: lmNegativePrompt || undefined,
       ...overrides,
     };
   };
@@ -655,16 +588,11 @@ export default function HomePage() {
     console.log("Contrast level:", contrastLevel);
     console.log("Alt lyrics:", altLyrics);
     console.log("Duration:", duration);
-    console.log("Seed:", seed);
-
-    const seedA = parseSeed(seed);
-    const seedB = seedA !== undefined ? seedA + 1 : undefined;
-    console.log("Parsed seeds:", { seedA, seedB });
 
     if (isInstrumental) {
-      const draftA = makeDraft(prompt, "[Instrumental]", duration, true, seedA);
+      const draftA = makeDraft(prompt, "[Instrumental]", duration, true);
       const contrastCaption = buildContrastCaption(prompt);
-      const draftB = makeDraft(contrastCaption, "[Instrumental]", duration, true, seedB);
+      const draftB = makeDraft(contrastCaption, "[Instrumental]", duration, true);
       setPreviewTracks([draftA, draftB]);
       console.groupEnd();
       setState("preview-lyrics");
@@ -704,13 +632,12 @@ export default function HomePage() {
         secondary = { ...primary, caption: contrastCaption };
       }
 
-      const draftA = makeDraft(primary.caption, primary.lyrics, finalDuration, false, seedA);
+      const draftA = makeDraft(primary.caption, primary.lyrics, finalDuration, false);
       const draftB = makeDraft(
         secondary.caption,
         altLyrics ? secondary.lyrics : primary.lyrics,
         secondary.duration || finalDuration,
-        false,
-        seedB
+        false
       );
 
       console.groupEnd();
@@ -724,102 +651,6 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : "Failed to generate lyrics");
       setState("compose");
     }
-  };
-
-  const handleProGenerate = async () => {
-    setError(null);
-    if (!caption.trim()) {
-      setError("Please describe the music you want");
-      return;
-    }
-
-    console.group("%c[RIFF] Pro Generate", "color: #ec4899; font-weight: bold; font-size: 14px");
-
-    const baseCaption = buildCaptionWithTags(caption);
-    const altCaption = buildContrastCaption(baseCaption);
-    const seedA = parseSeed(seed);
-    const seedB = seedA !== undefined ? seedA + 1 : undefined;
-
-    if (isInstrumental) {
-      const draftA = makeDraft(baseCaption, "[Instrumental]", duration, true, seedA);
-      const draftB = makeDraft(altCaption, "[Instrumental]", duration, true, seedB);
-      console.groupEnd();
-      setPreviewTracks([draftA, draftB]);
-      setState("preview-lyrics");
-      return;
-    }
-
-    let primaryLyrics = lyrics.trim();
-    let secondaryLyrics = lyrics.trim();
-    let selectedDuration = duration;
-
-    if (!primaryLyrics) {
-      setState("writing-lyrics");
-      try {
-        const proLang = vocalLanguage === "auto" ? undefined : vocalLanguage;
-        const primary = await generateLyrics({
-          prompt: baseCaption,
-          lyricsDensity,
-          duration,
-          language: proLang,
-          voiceGender: voiceGender !== "auto" ? voiceGender : undefined,
-        });
-        const finalDuration = primary.duration || duration;
-        primaryLyrics = primary.lyrics;
-        secondaryLyrics = primary.lyrics;
-        selectedDuration = finalDuration;
-
-        if (altLyrics) {
-          const secondary = await generateLyrics({
-            prompt: baseCaption,
-            lyricsDensity,
-            duration,
-            variant: "alternate",
-            baseLyrics: primary.lyrics,
-            baseCaption: primary.caption,
-            contrast: contrastLevel,
-            language: proLang,
-            voiceGender: voiceGender !== "auto" ? voiceGender : undefined,
-          });
-          secondaryLyrics = secondary.lyrics;
-        }
-
-        setDuration(finalDuration);
-      } catch (err) {
-        console.groupEnd();
-        setError(err instanceof Error ? err.message : "Failed to generate lyrics");
-        setState("compose");
-        return;
-      }
-    } else if (altLyrics) {
-      setState("writing-lyrics");
-      try {
-        const proLang2 = vocalLanguage === "auto" ? undefined : vocalLanguage;
-        const secondary = await generateLyrics({
-          prompt: baseCaption,
-          duration,
-          variant: "alternate",
-          baseLyrics: primaryLyrics,
-          baseCaption: baseCaption,
-          contrast: contrastLevel,
-          language: proLang2,
-          voiceGender: voiceGender !== "auto" ? voiceGender : undefined,
-        });
-        secondaryLyrics = secondary.lyrics;
-      } catch (err) {
-        console.groupEnd();
-        setError(err instanceof Error ? err.message : "Failed to generate lyrics");
-        setState("compose");
-        return;
-      }
-    }
-
-    const draftA = makeDraft(baseCaption, primaryLyrics, selectedDuration, false, seedA);
-    const draftB = makeDraft(altCaption, secondaryLyrics || primaryLyrics, selectedDuration, false, seedB);
-    console.groupEnd();
-
-    setPreviewTracks([draftA, draftB]);
-    setState("preview-lyrics");
   };
 
   const handlePreviewGenerate = async () => {
@@ -843,9 +674,6 @@ export default function HomePage() {
 
     setError(null);
     setState("queued");
-
-    const currentSeed = track.seed ? parseSeed(track.seed) : undefined;
-    const regenSeed = currentSeed !== undefined ? currentSeed + 17 : undefined;
 
     const payload = {
       caption: track.caption,
@@ -876,7 +704,7 @@ export default function HomePage() {
       lm_top_k: track.lm_top_k ?? 0,
       lm_top_p: track.lm_top_p ?? 0.9,
       lm_negative_prompt: track.lm_negative_prompt || null,
-      seed: regenSeed ?? null,
+      seed: null,
     };
 
     try {
@@ -932,28 +760,6 @@ export default function HomePage() {
     } catch {
       setError("Failed to save track locally.");
     }
-  };
-
-  const handleGenreSelect = (prompt: string, label: string) => {
-    setCaption(prompt);
-    setSelectedGenre(label);
-  };
-
-  const insertSectionMarker = (marker: string) => {
-    const textarea = lyricsRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = lyrics.slice(0, start);
-    const after = lyrics.slice(end);
-    const insertion = before.endsWith("\n") || before === "" ? `${marker}\n` : `\n${marker}\n`;
-    const newLyrics = before + insertion + after;
-    setLyrics(newLyrics);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const newPos = start + insertion.length;
-      textarea.setSelectionRange(newPos, newPos);
-    });
   };
 
   const extractSection = (text: string, section: string) => {
@@ -1014,31 +820,18 @@ export default function HomePage() {
     setSmartPrompt("");
     setCaption("");
     setLyrics("");
-    setStyleTags("");
-    setNegativeTags("");
-    setSeed("");
-    setSelectedGenre(null);
     setVibe(null);
     setIsInstrumental(false);
     setLyricsDensity("moderate");
     setAutoSave(true);
     setVoiceGender("auto");
-    setBpm("");
-    setMusicalKey("");
-    setTimeSignature("");
     setVocalLanguage("auto");
-    setGenreSearch("");
-    setShowMusicalControls(false);
     setUploadedAudioPath(null);
     setUploadedAudioName("");
-    setShift(3.0);
-    setGuidanceScale(7.0);
     setAudioFormat("mp3");
     setRepaintStart(0);
     setRepaintEnd(-1);
     setCoverStrength(1.0);
-    setUseCotMetas(true);
-    setUseCotCaption(true);
     setExtractResult(null);
     setError(null);
     setState("compose");
@@ -1070,12 +863,11 @@ export default function HomePage() {
       return;
     }
 
-    const seedA = parseSeed(seed);
     const baseCaption = caption.trim() || "music";
 
     if (taskType === "extract") {
       setExtractResult(null);
-      const draft: TrackDraft = makeDraft(baseCaption, "[Instrumental]", duration, true, seedA, {
+      const draft: TrackDraft = makeDraft(baseCaption, "[Instrumental]", duration, true, {
         task_type: "extract",
         src_audio_path: uploadedAudioPath,
       });
@@ -1101,11 +893,10 @@ export default function HomePage() {
     }
 
     const draft: TrackDraft = makeDraft(
-      buildCaptionWithTags(baseCaption),
+      baseCaption,
       lyrics.trim() || "[Instrumental]",
       duration,
       isInstrumental || !lyrics.trim(),
-      seedA,
       overrides,
     );
     setPreviewTracks([draft]);
@@ -1117,18 +908,12 @@ export default function HomePage() {
 
   const handleCopyExtractToCreate = () => {
     if (!extractResult) return;
-    setTaskType("text2music");
-    setCaption(extractResult.caption || "");
-    setBpm(extractResult.bpm ? String(extractResult.bpm) : "");
-    setMusicalKey(extractResult.key || "");
-    setTimeSignature(extractResult.timesignature || "");
-    setMode("pro");
+    setSmartPrompt(extractResult.caption || "");
     setState("compose");
     setExtractResult(null);
   };
 
   const canSmartGenerate = smartPrompt.trim().length > 0;
-  const canProGenerate = caption.trim().length > 0;
   const canAudioTaskGenerate = !!uploadedAudioPath && (taskType === "extract" || caption.trim().length > 0);
 
   const anyQueued = trackJobs.some((job) => job.status === "queued");
@@ -1237,7 +1022,7 @@ export default function HomePage() {
                   )}
                   <div className="flex gap-3">
                     <button type="button" onClick={handleCopyExtractToCreate} className="flex-1 rounded-xl px-4 py-3 btn-primary text-white font-semibold text-sm">
-                      Use in Create tab
+                      Use as prompt
                     </button>
                     <button type="button" onClick={handleReset} className="flex-1 rounded-xl px-4 py-3 glass glass-hover text-muted-foreground font-medium text-sm">
                       Start fresh
@@ -1526,6 +1311,19 @@ export default function HomePage() {
                   </div>
                 )}
 
+                {/* Duration */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</label>
+                    <span className="text-sm font-mono text-foreground tabular-nums">{duration}s</span>
+                  </div>
+                  <input type="range" min={10} max={600} step={5} value={duration} onChange={(e) => setDuration(parseInt(e.target.value, 10))} className="w-full" aria-label="Duration in seconds" />
+                  <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                    <span>10s</span>
+                    <span>10min</span>
+                  </div>
+                </div>
+
                 {/* Error */}
                 {error && (
                   <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2.5">{error}</p>
@@ -1533,8 +1331,8 @@ export default function HomePage() {
 
                 {/* CTA */}
                 <button
-                  onClick={mode === "smart" ? handleSmartGenerate : handleProGenerate}
-                  disabled={mode === "smart" ? !canSmartGenerate : !canProGenerate}
+                  onClick={handleSmartGenerate}
+                  disabled={!canSmartGenerate}
                   className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 btn-primary text-white font-semibold text-base"
                 >
                   {isInstrumental ? "Generate Two Tracks" : "Write Lyrics & Preview"}
@@ -1563,19 +1361,6 @@ export default function HomePage() {
                         </div>
                       </div>
                     )}
-
-                    {/* Duration slider */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</label>
-                        <span className="text-sm font-mono text-foreground tabular-nums">{duration}s</span>
-                      </div>
-                      <input type="range" min={10} max={600} step={5} value={duration} onChange={(e) => setDuration(parseInt(e.target.value, 10))} className="w-full" aria-label="Duration in seconds" />
-                      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-                        <span>10s</span>
-                        <span>600s</span>
-                      </div>
-                    </div>
 
                     {/* Audio format */}
                     <div className="space-y-2">
@@ -1610,241 +1395,6 @@ export default function HomePage() {
                         Auto-save to Library
                       </label>
                     </div>
-
-                    {/* ─── Pro Controls accordion ─── */}
-                    <details className="group/pro">
-                      <summary className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className="transition-transform group-open/pro:rotate-90">
-                          <path d="M4.5 2.5l4 3.5-4 3.5" />
-                        </svg>
-                        <span className="uppercase tracking-wide">Pro Controls</span>
-                      </summary>
-                      <div className="glass-subtle rounded-xl p-4 mt-3 space-y-5">
-                        {/* Genre quick picks */}
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Genre</label>
-                          <input
-                            type="text"
-                            value={genreSearch}
-                            onChange={(e) => setGenreSearch(e.target.value)}
-                            placeholder="Search genres..."
-                            className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                          />
-                          <GenrePills selected={selectedGenre} onSelect={handleGenreSelect} filter={genreSearch} />
-                        </div>
-
-                        {/* Music description (Pro caption) */}
-                        <div className="space-y-2">
-                          <label htmlFor="pro-caption" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Music description (Pro)
-                          </label>
-                          <textarea
-                            id="pro-caption"
-                            value={caption}
-                            onChange={(e) => { setCaption(e.target.value); setSelectedGenre(null); }}
-                            placeholder="e.g. A melancholic piano ballad with soft strings and rain sounds..."
-                            rows={3}
-                            maxLength={512}
-                            className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none"
-                          />
-                        </div>
-
-                        {/* Style tags */}
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <div className="space-y-1">
-                            <label className="text-xs text-muted-foreground">Style tags</label>
-                            <input type="text" value={styleTags} onChange={(e) => setStyleTags(e.target.value)} placeholder="lofi, warm vinyl, soft piano" className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs text-muted-foreground">Avoid</label>
-                            <input type="text" value={negativeTags} onChange={(e) => setNegativeTags(e.target.value)} placeholder="no heavy drums, no distortion" className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
-                          </div>
-                        </div>
-
-                        {/* Lyrics editor (vocal only) */}
-                        {!isInstrumental && (
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Lyrics (optional)</label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {SECTION_MARKERS.map((marker) => (
-                                <button key={marker} type="button" onClick={() => insertSectionMarker(marker)} className="glass-chip text-xs px-2.5 py-1">
-                                  {marker}
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              ref={lyricsRef}
-                              value={lyrics}
-                              onChange={(e) => setLyrics(e.target.value)}
-                              placeholder="[Verse]\nYour lyrics here...\n\n[Chorus]\nSing along..."
-                              rows={6}
-                              maxLength={4096}
-                              className="w-full rounded-xl glass-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 font-mono resize-none focus:outline-none"
-                            />
-                          </div>
-                        )}
-
-                        {/* Musical Controls */}
-                        <div className="space-y-2">
-                          <button type="button" onClick={() => setShowMusicalControls(!showMusicalControls)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className={cn("transition-transform", showMusicalControls && "rotate-90")}>
-                              <path d="M4.5 2.5l4 3.5-4 3.5" />
-                            </svg>
-                            <span className="uppercase">Musical Controls</span>
-                          </button>
-                          {showMusicalControls && (
-                            <div className="glass-subtle rounded-xl p-4 space-y-4">
-                              <div className="space-y-1">
-                                <label htmlFor="bpm" className="text-xs text-muted-foreground">BPM (leave empty for auto)</label>
-                                <input id="bpm" type="number" min={40} max={240} value={bpm} onChange={(e) => setBpm(e.target.value)} placeholder="Auto" className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
-                              </div>
-                              <div className="space-y-1">
-                                <label htmlFor="musical-key" className="text-xs text-muted-foreground">Key (leave empty for auto)</label>
-                                <select id="musical-key" value={musicalKey} onChange={(e) => setMusicalKey(e.target.value)} className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground bg-transparent focus:outline-none appearance-none cursor-pointer">
-                                  <option value="" className="bg-white">Auto</option>
-                                  {MUSICAL_KEYS.map((k) => (
-                                    <option key={k} value={k} className="bg-white">{k}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs text-muted-foreground">Time Signature</label>
-                                <div className="glass-pill flex">
-                                  {["", "4", "3", "6"].map((ts) => (
-                                    <button key={ts} type="button" onClick={() => setTimeSignature(ts)} className={cn("glass-pill-segment flex-1 text-center", timeSignature === ts && "active")}>
-                                      {ts ? ({ "4": "4/4", "3": "3/4", "6": "6/8" } as Record<string, string>)[ts] : "Auto"}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <label htmlFor="seed" className="text-xs text-muted-foreground">Seed (leave empty for random)</label>
-                                <input id="seed" type="number" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="Random" className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Generation Settings */}
-                        <div className="space-y-2">
-                          <button type="button" onClick={() => setShowAdvancedGen(!showAdvancedGen)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className={cn("transition-transform", showAdvancedGen && "rotate-90")}>
-                              <path d="M4.5 2.5l4 3.5-4 3.5" />
-                            </svg>
-                            <span className="uppercase">Generation Settings</span>
-                          </button>
-                          {showAdvancedGen && (
-                            <div className="glass-subtle rounded-xl p-4 space-y-4">
-                              <div className="flex items-center gap-3">
-                                <label className="text-xs text-muted-foreground flex-1">Thinking (Chain-of-Thought)</label>
-                                <button type="button" onClick={() => setThinking(!thinking)} className={cn("w-10 h-5 rounded-full transition-colors relative", thinking ? "bg-foreground/80" : "bg-foreground/20")}>
-                                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", thinking ? "left-5" : "left-0.5")} />
-                                </button>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-xs text-muted-foreground">Quality steps</label>
-                                  <span className="text-xs text-muted-foreground/70">{inferenceSteps}</span>
-                                </div>
-                                <input type="range" min={1} max={20} step={1} value={inferenceSteps} onChange={(e) => setInferenceSteps(parseInt(e.target.value, 10))} className="w-full accent-foreground/60" />
-                                <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                                  <span>Fast</span>
-                                  <span>High Quality</span>
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs text-muted-foreground">Inference Method</label>
-                                <div className="glass-pill flex">
-                                  {(["ode", "sde"] as const).map((m) => (
-                                    <button key={m} type="button" onClick={() => setInferMethod(m)} className={cn("glass-pill-segment flex-1 text-center", inferMethod === m && "active")}>
-                                      {m === "ode" ? "ODE (Clean)" : "SDE (Textured)"}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-xs text-muted-foreground">Shift</label>
-                                  <span className="text-xs text-muted-foreground/70">{shift.toFixed(1)}</span>
-                                </div>
-                                <input type="range" min={1} max={5} step={0.1} value={shift} onChange={(e) => setShift(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-xs text-muted-foreground">Guidance scale</label>
-                                  <span className="text-xs text-muted-foreground/70">{guidanceScale.toFixed(1)}</span>
-                                </div>
-                                <input type="range" min={1} max={15} step={0.5} value={guidanceScale} onChange={(e) => setGuidanceScale(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <label className="text-xs text-muted-foreground flex-1">Auto-detect metadata (CoT)</label>
-                                <button type="button" onClick={() => setUseCotMetas(!useCotMetas)} className={cn("w-10 h-5 rounded-full transition-colors relative", useCotMetas ? "bg-foreground/80" : "bg-foreground/20")}>
-                                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", useCotMetas ? "left-5" : "left-0.5")} />
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <label className="text-xs text-muted-foreground flex-1">Enhance caption (CoT)</label>
-                                <button type="button" onClick={() => setUseCotCaption(!useCotCaption)} className={cn("w-10 h-5 rounded-full transition-colors relative", useCotCaption ? "bg-foreground/80" : "bg-foreground/20")}>
-                                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform", useCotCaption ? "left-5" : "left-0.5")} />
-                                </button>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-xs text-muted-foreground">Creativity</label>
-                                  <span className="text-xs text-muted-foreground/70">{lmTemperature.toFixed(2)}</span>
-                                </div>
-                                <input type="range" min={0} max={2} step={0.05} value={lmTemperature} onChange={(e) => setLmTemperature(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
-                                <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                                  <span>Predictable</span>
-                                  <span>Creative</span>
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-xs text-muted-foreground">Prompt adherence</label>
-                                  <span className="text-xs text-muted-foreground/70">{lmCfgScale.toFixed(1)}</span>
-                                </div>
-                                <input type="range" min={1} max={3} step={0.1} value={lmCfgScale} onChange={(e) => setLmCfgScale(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
-                                <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                                  <span>Free</span>
-                                  <span>Guided</span>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <label className="text-xs text-muted-foreground">Top-K</label>
-                                    <span className="text-xs text-muted-foreground/70">{lmTopK || "Off"}</span>
-                                  </div>
-                                  <input type="range" min={0} max={100} step={1} value={lmTopK} onChange={(e) => setLmTopK(parseInt(e.target.value, 10))} className="w-full accent-foreground/60" />
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <label className="text-xs text-muted-foreground">Top-P</label>
-                                    <span className="text-xs text-muted-foreground/70">{lmTopP.toFixed(2)}</span>
-                                  </div>
-                                  <input type="range" min={0} max={1} step={0.05} value={lmTopP} onChange={(e) => setLmTopP(parseFloat(e.target.value))} className="w-full accent-foreground/60" />
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs text-muted-foreground">Negative Prompt (things to avoid in generation)</label>
-                                <input type="text" value={lmNegativePrompt} onChange={(e) => setLmNegativePrompt(e.target.value)} placeholder="e.g. distortion, heavy bass, noise" className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Pro generate button — uses Pro caption */}
-                        {caption.trim() && (
-                          <button
-                            onClick={() => { setMode("pro"); handleProGenerate(); }}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3 glass glass-hover text-muted-foreground font-semibold text-sm hover:text-foreground transition-colors"
-                          >
-                            Generate with Pro settings
-                          </button>
-                        )}
-                      </div>
-                    </details>
 
                     {/* ─── Audio Tasks accordion ─── */}
                     <details className="group/tasks">
