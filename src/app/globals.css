@@ -215,11 +215,13 @@ body {
 }
 
 .glass-pill-segment.active {
-  background: var(--glass-active);
+  background: white;
   color: var(--foreground);
+  font-weight: 600;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04);
+    0 1px 4px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  border-bottom: 2px solid var(--accent);
 }
 
 /* Glass chip (vibe/genre pills) */
